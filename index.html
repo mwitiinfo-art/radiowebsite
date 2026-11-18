@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jesus Is LORD Radio - Live Stream</title>
+  <title>Jesus Is LORD Radio</title>
   <style>
     body {
       margin: 0;
@@ -50,6 +50,13 @@
     }
     .jil-logo-btn:hover { transform: scale(1.04); }
     .jil-logo-btn:active { transform: scale(0.96); }
+
+    .jil-logo-btn img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
 
     .jil-play-overlay {
       position: absolute;
@@ -192,8 +199,9 @@
 <body>
 
   <div id="jil-pill-player">
-    <!-- Play/Pause Button -->
+    <!-- Left Play/Pause Button (Red Icon) -->
     <button id="jil-play-btn" class="jil-logo-btn" aria-label="Play or Pause" title="Play / Pause">
+      <!-- Optional Logo: <img src="YOUR_LOGO_URL.png" alt="Jesus Is LORD Radio"> -->
       <div class="jil-play-overlay">
         <svg id="jil-play-icon" width="20" height="20" viewBox="0 0 24 24" fill="#ff5252">
           <polygon points="6,4 20,12 6,20"></polygon>
@@ -201,16 +209,16 @@
       </div>
     </button>
 
-    <!-- Title & Status -->
+    <!-- Title & Live Status -->
     <div class="jil-info">
       <div class="jil-title">Jesus Is LORD Radio</div>
       <div class="jil-live-row">
         <span id="jil-dot" class="jil-status-dot"></span>
-        <span id="jil-live-label" class="jil-live-text">Click Play</span>
+        <span id="jil-live-label" class="jil-live-text">Tap to Listen</span>
       </div>
     </div>
 
-    <!-- Controls -->
+    <!-- Circular Record & Volume Buttons -->
     <div class="jil-circle-controls">
       <button id="jil-rec-btn" class="jil-circle-btn" aria-label="Record Live Audio" title="Record Audio">
         <span class="jil-rec-dot"></span>
@@ -218,7 +226,7 @@
 
       <div class="jil-vol-wrapper">
         <button id="jil-vol-btn" class="jil-circle-btn" aria-label="Volume" title="Volume">
-          <svg id="jil-vol-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
             <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
             <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
@@ -236,4 +244,269 @@
     const STREAMS = [
       "https://s3.radio.co/s97f38db97/listen",
       "https://stream.zeno.fm/3gdtad95608uv",
-      "
+      "https://stream.zeno.fm/thdtw5xd9eiuv"
+    ];
+
+    const FAILOVER_MS = 10000;
+    let currentIdx = 0;
+    let isPlaying = false;
+    let isFlowing = false;
+    let failoverTimer = null;
+    let watchdogTimer = null;
+    let lastTime = -1;
+
+    // Standard HTML5 Audio (no crossOrigin attribute so playback never breaks on strict servers)
+    const audio = new Audio();
+    audio.preload = "none";
+
+    const playBtn = document.getElementById("jil-play-btn");
+    const playIcon = document.getElementById("jil-play-icon");
+    const statusDot = document.getElementById("jil-dot");
+    const liveLabel = document.getElementById("jil-live-label");
+    const volumeSlider = document.getElementById("jil-volume");
+    const volBtn = document.getElementById("jil-vol-btn");
+    const volPopover = document.getElementById("jil-vol-popover");
+    const recBtn = document.getElementById("jil-rec-btn");
+
+    const PLAY_SVG = '<polygon points="6,4 20,12 6,20"></polygon>';
+    const PAUSE_SVG = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+
+    audio.volume = parseFloat(volumeSlider.value);
+
+    function setUI(live, label) {
+      if (!isRecording) liveLabel.textContent = label;
+      if (live) {
+        statusDot.classList.add("active");
+        playIcon.innerHTML = PAUSE_SVG;
+      } else {
+        statusDot.classList.remove("active");
+        playIcon.innerHTML = isPlaying ? PAUSE_SVG : PLAY_SVG;
+      }
+    }
+
+    function clearTimers() {
+      if (failoverTimer) clearTimeout(failoverTimer);
+      failoverTimer = null;
+    }
+
+    function scheduleFailover() {
+      if (failoverTimer || !isPlaying) return;
+      isFlowing = false;
+      setUI(false, "Reconnecting...");
+
+      failoverTimer = setTimeout(() => {
+        clearTimers();
+        currentIdx = (currentIdx + 1) % STREAMS.length;
+        connectStream(currentIdx);
+      }, FAILOVER_MS);
+    }
+
+    function connectStream(index) {
+      clearTimers();
+      isFlowing = false;
+      lastTime = -1;
+      setUI(false, "Connecting...");
+
+      audio.src = STREAMS[index];
+      audio.load();
+
+      scheduleFailover();
+
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          isFlowing = true;
+          lastTime = audio.currentTime;
+          clearTimers();
+          setUI(true, "Live");
+        }).catch(() => {
+          // Wait for scheduleFailover() to switch streams cleanly
+        });
+      }
+    }
+
+    audio.addEventListener("playing", () => {
+      isFlowing = true;
+      lastTime = audio.currentTime;
+      clearTimers();
+      setUI(true, "Live");
+    });
+
+    audio.addEventListener("waiting", () => {
+      if (isPlaying && isFlowing) scheduleFailover();
+    });
+
+    audio.addEventListener("stalled", () => {
+      if (isPlaying && isFlowing) scheduleFailover();
+    });
+
+    audio.addEventListener("error", () => {
+      if (isPlaying) scheduleFailover();
+    });
+
+    audio.addEventListener("ended", () => {
+      if (isPlaying) {
+        clearTimers();
+        currentIdx = (currentIdx + 1) % STREAMS.length;
+        connectStream(currentIdx);
+      }
+    });
+
+    function startWatchdog() {
+      if (watchdogTimer) clearInterval(watchdogTimer);
+      watchdogTimer = setInterval(() => {
+        if (!isPlaying || !isFlowing) return;
+        if (audio.currentTime === lastTime && !failoverTimer) {
+          scheduleFailover();
+        } else if (audio.currentTime !== lastTime) {
+          lastTime = audio.currentTime;
+          if (failoverTimer) {
+            clearTimers();
+            setUI(true, "Live");
+          }
+        }
+      }, 2500);
+    }
+
+    function startRadio() {
+      isPlaying = true;
+      startWatchdog();
+      connectStream(currentIdx);
+    }
+
+    function stopRadio() {
+      isPlaying = false;
+      isFlowing = false;
+      clearTimers();
+      if (watchdogTimer) clearInterval(watchdogTimer);
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+      setUI(false, "Tap to Listen");
+      if (isRecording) stopRecording();
+    }
+
+    // Direct user gesture triggers playback immediately
+    playBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!isPlaying) startRadio();
+      else stopRadio();
+    });
+
+    // Volume controls
+    volBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      volPopover.classList.toggle("open");
+    });
+
+    document.addEventListener("click", () => {
+      volPopover.classList.remove("open");
+    });
+
+    volPopover.addEventListener("click", (e) => e.stopPropagation());
+
+    volumeSlider.addEventListener("input", (e) => {
+      audio.volume = parseFloat(e.target.value);
+    });
+
+    // Isolated Recording Engine (never interrupts main playback if blocked by CORS)
+    let isRecording = false;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let recInterval = null;
+    let recSeconds = 0;
+    let recAudio = null;
+    let recCtx = null;
+
+    function startRecording() {
+      if (!isPlaying) startRadio();
+
+      try {
+        recAudio = new Audio();
+        recAudio.crossOrigin = "anonymous";
+        recAudio.src = STREAMS[currentIdx];
+        recAudio.muted = true;
+
+        recAudio.play().then(() => {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          recCtx = new AC();
+          const dest = recCtx.createMediaStreamDestination();
+          const source = recCtx.createMediaElementSource(recAudio);
+          source.connect(dest);
+
+          const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
+          mediaRecorder = mimeType ? new MediaRecorder(dest.stream, { mimeType }) : new MediaRecorder(dest.stream);
+          recordedChunks = [];
+
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+          };
+
+          mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type: mimeType || "audio/ogg" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.style.display = "none";
+            a.href = url;
+            a.download = `Jesus-Is-LORD-Radio-${Date.now()}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }, 100);
+          };
+
+          mediaRecorder.start();
+          isRecording = true;
+          recBtn.classList.add("recording");
+          recSeconds = 0;
+          liveLabel.textContent = "Rec 00:00";
+
+          recInterval = setInterval(() => {
+            recSeconds++;
+            const m = String(Math.floor(recSeconds / 60)).padStart(2, "0");
+            const s = String(recSeconds % 60).padStart(2, "0");
+            liveLabel.textContent = `Rec ${m}:${s}`;
+          }, 1000);
+        }).catch(() => {
+          cleanupRecorder();
+          alert("Recording is blocked by the stream server's CORS policy, but live listening will continue uninterrupted.");
+        });
+      } catch (err) {
+        cleanupRecorder();
+      }
+    }
+
+    function cleanupRecorder() {
+      isRecording = false;
+      clearInterval(recInterval);
+      recBtn.classList.remove("recording");
+      liveLabel.textContent = isPlaying ? "Live" : "Tap to Listen";
+      if (recAudio) {
+        recAudio.pause();
+        recAudio.removeAttribute("src");
+        recAudio = null;
+      }
+      if (recCtx) {
+        recCtx.close().catch(() => {});
+        recCtx = null;
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+      }
+      cleanupRecorder();
+    }
+
+    recBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!isRecording) startRecording();
+      else stopRecording();
+    });
+  })();
+  </script>
+</body>
+</html>
