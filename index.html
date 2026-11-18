@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jesus Is LORD Radio - Live Stream</title>
   <style>
-    /* Centering the player on the page for preview/standalone hosting */
     body {
       margin: 0;
       padding: 20px;
@@ -18,7 +17,6 @@
       box-sizing: border-box;
     }
 
-    /* Pill Player Container */
     #jil-pill-player {
       display: inline-flex;
       align-items: center;
@@ -34,7 +32,6 @@
       box-sizing: border-box;
     }
 
-    /* Left Play Badge Button */
     .jil-logo-btn {
       position: relative;
       width: 44px;
@@ -70,7 +67,6 @@
       background: rgba(13, 29, 53, 0.25);
     }
 
-    /* Title & Live Status */
     .jil-info {
       display: flex;
       flex-direction: column;
@@ -112,7 +108,6 @@
       font-weight: 400;
     }
 
-    /* Circle Action Buttons (Record & Volume) */
     .jil-circle-controls {
       display: flex;
       align-items: center;
@@ -140,7 +135,6 @@
       border-color: rgba(255, 255, 255, 0.45);
     }
 
-    /* Record Dot */
     .jil-rec-dot {
       width: 8px;
       height: 8px;
@@ -160,7 +154,6 @@
       animation: jilPulse 1.2s infinite;
     }
 
-    /* Volume Vertical Popover */
     .jil-vol-wrapper {
       position: relative;
       display: flex;
@@ -208,10 +201,7 @@
   <div id="jil-pill-player">
     <!-- Left Play/Pause Button (Red Icon) -->
     <button id="jil-play-btn" class="jil-logo-btn" aria-label="Play or Pause" title="Play / Pause">
-      <!-- Optional: Replace with your circular logo PNG/JPG -->
-      <!-- <img src="YOUR_LOGO_URL.png" alt="Jesus Is LORD Radio"> -->
       <div class="jil-play-overlay">
-        <!-- Changed fill from yellow (#facc15) to red (#ff5252) -->
         <svg id="jil-play-icon" width="20" height="20" viewBox="0 0 24 24" fill="#ff5252">
           <polygon points="6,4 20,12 6,20"></polygon>
         </svg>
@@ -238,4 +228,231 @@
       <div class="jil-vol-wrapper">
         <button id="jil-vol-btn" class="jil-circle-btn" aria-label="Volume" title="Volume">
           <svg id="jil-vol-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="11 5 6 9 2 9 2 15 6 15
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+        </button>
+        <div id="jil-vol-popover" class="jil-vol-popover">
+          <input type="range" id="jil-volume" class="jil-vol-slider" min="0" max="1" step="0.01" value="0.85">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    // =========================================================
+    // 1. CONFIGURE YOUR 4 AUDIO STREAM LINKS HERE
+    // =========================================================
+    const STREAMS = [
+      { name: "Stream 1", url: "https://stream.zeno.fm/thdtw5xd9eiuv" },
+      { name: "Stream 2", url: "https://s3.radio.co/s97f38db97/listen" }, // <-- Replace with Link 2
+      { name: "Stream 3", url: "https://stream.zeno.fm/3gdtad95608uv" }, // <-- Replace with Link 3
+      { name: "Stream 4", url: "https://stream.zeno.fm/thdtw5xd9eiuv" }  // <-- Replace with Link 4
+    ];
+
+    const FAILOVER_SECONDS = 10;
+
+    // =========================================================
+    // 2. DUAL-AUDIO 24/7 FAILOVER ENGINE
+    // =========================================================
+    let currentIdx = 0;
+    let isPlaying = false;
+    let failoverTimer = null;
+    let watchdogTimer = null;
+    let lastTime = 0;
+
+    const playerA = new Audio();
+    const playerB = new Audio();
+    playerA.preload = "none";
+    playerB.preload = "none";
+
+    let active = playerA;
+    let standby = playerB;
+
+    const playBtn = document.getElementById("jil-play-btn");
+    const playIcon = document.getElementById("jil-play-icon");
+    const statusDot = document.getElementById("jil-dot");
+    const liveLabel = document.getElementById("jil-live-label");
+    const volumeSlider = document.getElementById("jil-volume");
+    const volBtn = document.getElementById("jil-vol-btn");
+    const volPopover = document.getElementById("jil-vol-popover");
+    const recBtn = document.getElementById("jil-rec-btn");
+
+    const PLAY_SVG = '<polygon points="6,4 20,12 6,20"></polygon>';
+    const PAUSE_SVG = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+
+    active.volume = parseFloat(volumeSlider.value);
+    standby.volume = parseFloat(volumeSlider.value);
+
+    function setLiveState(live) {
+      if (live) {
+        statusDot.classList.add("active");
+        playIcon.innerHTML = PAUSE_SVG;
+        if (!mediaRecorder || mediaRecorder.state === "inactive") {
+          liveLabel.textContent = "Live";
+        }
+      } else {
+        statusDot.classList.remove("active");
+        if (!isPlaying) {
+          playIcon.innerHTML = PLAY_SVG;
+          liveLabel.textContent = "Live";
+        }
+      }
+    }
+
+    let audioCtx = null;
+    function keepAlive() {
+      try {
+        if (!audioCtx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          audioCtx = new AC();
+        }
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0.0001;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+      } catch (e) {}
+    }
+
+    function clearFailoverTimer() {
+      if (failoverTimer) clearTimeout(failoverTimer);
+      failoverTimer = null;
+    }
+
+    function triggerFailover() {
+      if (failoverTimer || !isPlaying) return;
+      setLiveState(false);
+
+      failoverTimer = setTimeout(() => {
+        clearFailoverTimer();
+        currentIdx = (currentIdx + 1) % STREAMS.length;
+        connectStream(currentIdx);
+      }, FAILOVER_SECONDS * 1000);
+    }
+
+    function bindEvents(audio) {
+      audio.onplaying = () => {
+        clearFailoverTimer();
+        setLiveState(true);
+      };
+      audio.onwaiting = () => { if (isPlaying) triggerFailover(); };
+      audio.onstalled = () => { if (isPlaying) triggerFailover(); };
+      audio.onerror   = () => { if (isPlaying) triggerFailover(); };
+      audio.onended   = () => {
+        if (isPlaying) {
+          clearFailoverTimer();
+          currentIdx = (currentIdx + 1) % STREAMS.length;
+          connectStream(currentIdx);
+        }
+      };
+    }
+
+    function connectStream(index, isAutoplayAttempt = false) {
+      clearFailoverTimer();
+      const stream = STREAMS[index];
+
+      // IMPORTANT: Do NOT append ?_t= query parameters to Zeno.fm links
+      standby.muted = false;
+      standby.src = stream.url;
+      standby.volume = parseFloat(volumeSlider.value);
+
+      triggerFailover();
+
+      const promise = standby.play();
+      if (promise !== undefined) {
+        promise.then(() => {
+          active.pause();
+          active.removeAttribute("src");
+          active.load();
+
+          const temp = active;
+          active = standby;
+          standby = temp;
+
+          bindEvents(active);
+          clearFailoverTimer();
+          setLiveState(true);
+        }).catch((err) => {
+          clearFailoverTimer();
+          if (err.name === "NotAllowedError" && isAutoplayAttempt) {
+            // Browser blocked unmuted autoplay: reset cleanly so clicking Play works immediately
+            isPlaying = false;
+            setLiveState(false);
+            liveLabel.textContent = "Tap to Listen";
+
+            // Also unlock audio automatically on first click anywhere on the page
+            const unlockOnGesture = () => {
+              window.removeEventListener("click", unlockOnGesture);
+              window.removeEventListener("touchstart", unlockOnGesture);
+              if (!isPlaying) startRadio();
+            };
+            window.addEventListener("click", unlockOnGesture);
+            window.addEventListener("touchstart", unlockOnGesture);
+          } else {
+            // Stream network error: wait 10s then try next backup link
+            triggerFailover();
+          }
+        });
+      }
+    }
+
+    function startWatchdog() {
+      if (watchdogTimer) clearInterval(watchdogTimer);
+      watchdogTimer = setInterval(() => {
+        if (!isPlaying) return;
+        if (active.currentTime === lastTime && !failoverTimer) {
+          triggerFailover();
+        } else if (active.currentTime !== lastTime) {
+          lastTime = active.currentTime;
+          if (failoverTimer) {
+            clearFailoverTimer();
+            setLiveState(true);
+          }
+        }
+      }, 2000);
+    }
+
+    function startRadio(isAutoplayAttempt = false) {
+      isPlaying = true;
+      playIcon.innerHTML = PAUSE_SVG;
+      keepAlive();
+      startWatchdog();
+      connectStream(currentIdx, isAutoplayAttempt);
+    }
+
+    function stopRadio() {
+      isPlaying = false;
+      clearFailoverTimer();
+      if (watchdogTimer) clearInterval(watchdogTimer);
+      active.pause();
+      active.removeAttribute("src");
+      active.load();
+      standby.pause();
+      standby.removeAttribute("src");
+      standby.load();
+      setLiveState(false);
+      if (mediaRecorder && mediaRecorder.state !== "inactive") stopRecording();
+    }
+
+    playBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!isPlaying) startRadio(false);
+      else stopRadio();
+    });
+
+    // Volume Control Popover
+    volBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      volPopover.classList.toggle("open");
+    });
+
+    document.addEventListener("click", () => {
+      volPopover.classList.remove("open");
+    });
+
+    volPopover.addEventListener("click", (e) => e.stopPropagation
