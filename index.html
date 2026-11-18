@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jesus Is LORD Radio</title>
+  <!-- Load lamejs encoder for true browser-side MP3 conversion -->
+  <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
   <style>
     body {
       margin: 0;
@@ -50,13 +52,6 @@
     }
     .jil-logo-btn:hover { transform: scale(1.04); }
     .jil-logo-btn:active { transform: scale(0.96); }
-
-    .jil-logo-btn img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 50%;
-    }
 
     .jil-play-overlay {
       position: absolute;
@@ -201,7 +196,6 @@
   <div id="jil-pill-player">
     <!-- Left Play/Pause Button (Red Icon) -->
     <button id="jil-play-btn" class="jil-logo-btn" aria-label="Play or Pause" title="Play / Pause">
-      <!-- Optional Logo: <img src="YOUR_LOGO_URL.png" alt="Jesus Is LORD Radio"> -->
       <div class="jil-play-overlay">
         <svg id="jil-play-icon" width="20" height="20" viewBox="0 0 24 24" fill="#ff5252">
           <polygon points="6,4 20,12 6,20"></polygon>
@@ -255,7 +249,6 @@
     let watchdogTimer = null;
     let lastTime = -1;
 
-    // Standard HTML5 Audio (no crossOrigin attribute so playback never breaks on strict servers)
     const audio = new Audio();
     audio.preload = "none";
 
@@ -319,9 +312,7 @@
           lastTime = audio.currentTime;
           clearTimers();
           setUI(true, "Live");
-        }).catch(() => {
-          // Wait for scheduleFailover() to switch streams cleanly
-        });
+        }).catch(() => {});
       }
     }
 
@@ -386,14 +377,12 @@
       if (isRecording) stopRecording();
     }
 
-    // Direct user gesture triggers playback immediately
     playBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       if (!isPlaying) startRadio();
       else stopRadio();
     });
 
-    // Volume controls
     volBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       volPopover.classList.toggle("open");
@@ -409,104 +398,5 @@
       audio.volume = parseFloat(e.target.value);
     });
 
-    // Isolated Recording Engine (never interrupts main playback if blocked by CORS)
-    let isRecording = false;
-    let mediaRecorder = null;
-    let recordedChunks = [];
-    let recInterval = null;
-    let recSeconds = 0;
-    let recAudio = null;
-    let recCtx = null;
-
-    function startRecording() {
-      if (!isPlaying) startRadio();
-
-      try {
-        recAudio = new Audio();
-        recAudio.crossOrigin = "anonymous";
-        recAudio.src = STREAMS[currentIdx];
-        recAudio.muted = true;
-
-        recAudio.play().then(() => {
-          const AC = window.AudioContext || window.webkitAudioContext;
-          recCtx = new AC();
-          const dest = recCtx.createMediaStreamDestination();
-          const source = recCtx.createMediaElementSource(recAudio);
-          source.connect(dest);
-
-          const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
-          mediaRecorder = mimeType ? new MediaRecorder(dest.stream, { mimeType }) : new MediaRecorder(dest.stream);
-          recordedChunks = [];
-
-          mediaRecorder.ondataavailable = (e) => {
-            if (e.data && e.data.size > 0) recordedChunks.push(e.data);
-          };
-
-          mediaRecorder.onstop = () => {
-            const blob = new Blob(recordedChunks, { type: mimeType || "audio/ogg" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.style.display = "none";
-            a.href = url;
-            a.download = `Jesus-Is-LORD-Radio-${Date.now()}.webm`;
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => {
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-            }, 100);
-          };
-
-          mediaRecorder.start();
-          isRecording = true;
-          recBtn.classList.add("recording");
-          recSeconds = 0;
-          liveLabel.textContent = "Rec 00:00";
-
-          recInterval = setInterval(() => {
-            recSeconds++;
-            const m = String(Math.floor(recSeconds / 60)).padStart(2, "0");
-            const s = String(recSeconds % 60).padStart(2, "0");
-            liveLabel.textContent = `Rec ${m}:${s}`;
-          }, 1000);
-        }).catch(() => {
-          cleanupRecorder();
-          alert("Recording is blocked by the stream server's CORS policy, but live listening will continue uninterrupted.");
-        });
-      } catch (err) {
-        cleanupRecorder();
-      }
-    }
-
-    function cleanupRecorder() {
-      isRecording = false;
-      clearInterval(recInterval);
-      recBtn.classList.remove("recording");
-      liveLabel.textContent = isPlaying ? "Live" : "Tap to Listen";
-      if (recAudio) {
-        recAudio.pause();
-        recAudio.removeAttribute("src");
-        recAudio = null;
-      }
-      if (recCtx) {
-        recCtx.close().catch(() => {});
-        recCtx = null;
-      }
-    }
-
-    function stopRecording() {
-      if (mediaRecorder && mediaRecorder.state !== "inactive") {
-        mediaRecorder.stop();
-      }
-      cleanupRecorder();
-    }
-
-    recBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (!isRecording) startRecording();
-      else stopRecording();
-    });
-  })();
-  </script>
-</body>
-</html>
+    // =========================================================
+    // TRUE MP3 RECORDING ENGINE (lamejs)
