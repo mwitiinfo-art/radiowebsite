@@ -1,498 +1,310 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jesus Is LORD Radio</title>
-  <!-- Load lamejs encoder for true browser-side MP3 conversion -->
-  <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
-  <style>
-    body {
-      margin: 0;
-      padding: 20px;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: #090d16;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      box-sizing: border-box;
-    }
-
-    #jil-pill-player {
-      display: inline-flex;
-      align-items: center;
-      background: #0d1d35;
-      border-radius: 9999px;
-      padding: 6px 14px 6px 6px;
-      color: #ffffff;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      user-select: none;
-      gap: 12px;
-      max-width: 100%;
-      box-sizing: border-box;
-    }
-
-    .jil-logo-btn {
-      position: relative;
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      border: 2px solid #9ca3af;
-      background: radial-gradient(circle, #1e3a8a 35%, #d1d5db 36%, #9ca3af 100%);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      padding: 0;
-      overflow: hidden;
-      transition: transform 0.15s ease;
-    }
-    .jil-logo-btn:hover { transform: scale(1.04); }
-    .jil-logo-btn:active { transform: scale(0.96); }
-
-    .jil-play-overlay {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(13, 29, 53, 0.25);
-    }
-
-    .jil-info {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .jil-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: #ffffff;
-      letter-spacing: 0.2px;
-      white-space: nowrap;
-      line-height: 1.2;
-    }
-
-    .jil-live-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-top: 2px;
-    }
-
-    .jil-status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #8492a6;
-      transition: background 0.3s, box-shadow 0.3s;
-    }
-
-    .jil-status-dot.active {
-      background: #00e676;
-      box-shadow: 0 0 8px #00e676;
-    }
-
-    .jil-live-text {
-      font-size: 12px;
-      color: #cbd5e1;
-      font-weight: 400;
-    }
-
-    .jil-circle-controls {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-left: 4px;
-    }
-
-    .jil-circle-btn {
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      background: transparent;
-      color: #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      position: relative;
-      transition: background 0.2s, border-color 0.2s;
-    }
-
-    .jil-circle-btn:hover {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(255, 255, 255, 0.45);
-    }
-
-    .jil-rec-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #ffffff;
-      transition: all 0.2s ease;
-    }
-
-    .jil-circle-btn.recording {
-      border-color: #ff5252;
-      background: rgba(255, 82, 82, 0.15);
-    }
-
-    .jil-circle-btn.recording .jil-rec-dot {
-      background: #ff5252;
-      box-shadow: 0 0 8px #ff5252;
-      animation: jilPulse 1.2s infinite;
-    }
-
-    .jil-vol-wrapper {
-      position: relative;
-      display: flex;
-      align-items: center;
-    }
-
-    .jil-vol-popover {
-      position: absolute;
-      bottom: 46px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #0d1d35;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 20px;
-      padding: 10px 6px;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
-      z-index: 100;
-    }
-
-    .jil-vol-wrapper:hover .jil-vol-popover,
-    .jil-vol-popover.open {
-      display: flex;
-    }
-
-    .jil-vol-slider {
-      writing-mode: vertical-lr;
-      direction: rtl;
-      width: 4px;
-      height: 64px;
-      accent-color: #ff5252;
-      cursor: pointer;
-    }
-
-    @keyframes jilPulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'unsafe-inline'; media-src https: blob:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Jesus Is LORD Radio</title>
+<style>
+body{margin:0;padding:20px;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#090d16;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;box-sizing:border-box}
+.wrap{display:flex;flex-direction:column;align-items:center;gap:12px;max-width:100%}
+#jil-pill-player{display:inline-flex;align-items:center;background:#0d1d35;border-radius:9999px;padding:6px 14px 6px 6px;color:#fff;box-shadow:0 10px 25px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.08);user-select:none;gap:12px;max-width:100%;box-sizing:border-box}
+.jil-logo-btn{position:relative;width:44px;height:44px;border-radius:50%;border:2px solid #9ca3af;background:radial-gradient(circle,#1e3a8a 35%,#d1d5db 36%,#9ca3af 100%);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;overflow:hidden;transition:transform .15s}
+.jil-logo-btn:hover{transform:scale(1.04)}.jil-logo-btn:active{transform:scale(.96)}
+.jil-play-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(13,29,53,.25)}
+.jil-info{display:flex;flex-direction:column;justify-content:center}
+.jil-title{font-size:15px;font-weight:700;color:#fff;white-space:nowrap;line-height:1.2}
+.jil-live-row{display:flex;align-items:center;gap:6px;margin-top:2px}
+.jil-status-dot{width:8px;height:8px;border-radius:50%;background:#8492a6;transition:background .3s,box-shadow .3s}
+.jil-status-dot.active{background:#00e676;box-shadow:0 0 8px #00e676}
+.jil-live-text{font-size:12px;color:#cbd5e1}
+.jil-circle-controls{display:flex;align-items:center;gap:6px;margin-left:4px}
+.jil-circle-btn{width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:transparent;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:background .2s,border-color .2s;font:700 10px/1 inherit;padding:0}
+.jil-circle-btn:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.45)}
+.jil-circle-btn:disabled{opacity:.4;cursor:not-allowed}
+.jil-rec-dot{width:8px;height:8px;border-radius:50%;background:#fff;transition:all .2s}
+.jil-circle-btn.recording{border-color:#ff5252;background:rgba(255,82,82,.15)}
+.jil-circle-btn.recording .jil-rec-dot{background:#ff5252;box-shadow:0 0 8px #ff5252;animation:jilPulse 1.2s infinite}
+.jil-vol-wrapper{position:relative;display:flex;align-items:center}
+.jil-vol-popover{position:absolute;bottom:46px;left:50%;transform:translateX(-50%);background:#0d1d35;border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:10px 6px;display:none;flex-direction:column;align-items:center;box-shadow:0 6px 18px rgba(0,0,0,.5);z-index:100}
+.jil-vol-wrapper:hover .jil-vol-popover,.jil-vol-popover.open{display:flex}
+.jil-vol-slider{writing-mode:vertical-lr;direction:rtl;width:4px;height:64px;accent-color:#ff5252;cursor:pointer}
+#jil-panel{display:none;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;background:#0d1d35;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:10px 14px;color:#e2e8f0;font-size:13px;max-width:360px}
+#jil-panel.show{display:flex}
+#jil-panel a,#jil-panel button{background:#1e3a8a;color:#fff;border:0;border-radius:9999px;padding:6px 14px;font:600 12px inherit;cursor:pointer;text-decoration:none}
+#jil-panel button.ghost{background:transparent;border:1px solid rgba(255,255,255,.25)}
+@keyframes jilPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.85)}}
+</style>
 </head>
 <body>
-
+<div class="wrap">
   <div id="jil-pill-player">
-    <!-- Left Play/Pause Button (Red Icon) -->
     <button id="jil-play-btn" class="jil-logo-btn" aria-label="Play or Pause" title="Play / Pause">
       <div class="jil-play-overlay">
-        <svg id="jil-play-icon" width="20" height="20" viewBox="0 0 24 24" fill="#ff5252">
-          <polygon points="6,4 20,12 6,20"></polygon>
-        </svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#ff5252"><g id="jil-play-icon"><polygon points="6,4 20,12 6,20"></polygon></g></svg>
       </div>
     </button>
-
-    <!-- Title & Live Status -->
     <div class="jil-info">
       <div class="jil-title">Jesus Is LORD Radio</div>
-      <div class="jil-live-row">
-        <span id="jil-dot" class="jil-status-dot"></span>
-        <span id="jil-live-label" class="jil-live-text">Tap to Listen</span>
-      </div>
+      <div class="jil-live-row"><span id="jil-dot" class="jil-status-dot"></span><span id="jil-live-label" class="jil-live-text">Tap to Listen</span></div>
     </div>
-
-    <!-- Circular Record & Volume Buttons -->
     <div class="jil-circle-controls">
-      <button id="jil-rec-btn" class="jil-circle-btn" aria-label="Record Live Audio" title="Record Audio">
-        <span class="jil-rec-dot"></span>
-      </button>
-
+      <button id="jil-rec-btn" class="jil-circle-btn" aria-label="Record live audio" title="Record audio"><span class="jil-rec-dot"></span></button>
       <div class="jil-vol-wrapper">
         <button id="jil-vol-btn" class="jil-circle-btn" aria-label="Volume" title="Volume">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-          </svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
         </button>
-        <div id="jil-vol-popover" class="jil-vol-popover">
-          <input type="range" id="jil-volume" class="jil-vol-slider" min="0" max="1" step="0.01" value="0.85">
-        </div>
+        <div id="jil-vol-popover" class="jil-vol-popover"><input type="range" id="jil-volume" class="jil-vol-slider" min="0" max="1" step="0.01" value="0.85" aria-label="Volume"></div>
       </div>
     </div>
   </div>
+  <div id="jil-panel" role="status" aria-live="polite">
+    <span id="jil-msg"></span>
+    <a id="jil-dl" style="display:none">Download</a>
+    <button id="jil-share" style="display:none">Share</button>
+    <button id="jil-x" class="ghost">Close</button>
+  </div>
+</div>
 
-  <script>
-  (() => {
-    const STREAMS = [
-      "https://s3.radio.co/s97f38db97/listen",
-      "https://stream.zeno.fm/3gdtad95608uv",
-      "https://stream.zeno.fm/thdtw5xd9eiuv"
-    ];
+<script>
+(() => {
+  const STREAMS = [
+    "https://s3.radio.co/s97f38db97/listen",
+    "https://stream.zeno.fm/3gdtad95608uv",
+    "https://stream.zeno.fm/thdtw5xd9eiuv"
+  ];
+  // Pinned encoder builds, loaded only when first needed (tries the 2nd host if the 1st fails)
+  const LAME_URLS = [
+    "https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"
+  ];
+  const FAILOVER_MS = 10000;
+  const MAX_SEC = 7200;      // 2-hour memory safety cap
+  const MP3_RATES = [8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000];
 
-    const FAILOVER_MS = 10000;
-    let currentIdx = 0;
-    let isPlaying = false;
-    let failoverTimer = null;
+  let idx = 0, isPlaying = false, isFlowing = false, failTimer = null, watchdog = null, lastTime = -1;
+  let rec = null, starting = false, pendingRec = false, objUrl = null;
+  let ctx = null, srcNode = null, gainNode = null;
+  const noCors = new Set(); // streams that only play without CORS (cannot be recorded)
 
-    const audio = new Audio();
-    audio.preload = "none";
+  const $ = id => document.getElementById(id);
+  const playBtn = $("jil-play-btn"), playIcon = $("jil-play-icon"), dot = $("jil-dot"), label = $("jil-live-label");
+  const vol = $("jil-volume"), volBtn = $("jil-vol-btn"), volPop = $("jil-vol-popover");
+  const recBtn = $("jil-rec-btn");
+  const panel = $("jil-panel"), msg = $("jil-msg"), dl = $("jil-dl"), shareBtn = $("jil-share");
 
-    const playBtn = document.getElementById("jil-play-btn");
-    const playIcon = document.getElementById("jil-play-icon");
-    const statusDot = document.getElementById("jil-dot");
-    const liveLabel = document.getElementById("jil-live-label");
-    const volumeSlider = document.getElementById("jil-volume");
-    const volBtn = document.getElementById("jil-vol-btn");
-    const volPopover = document.getElementById("jil-vol-popover");
-    const recBtn = document.getElementById("jil-rec-btn");
+  const audio = new Audio();
+  audio.preload = "none";
+  audio.setAttribute("playsinline", "");
+  audio.volume = parseFloat(vol.value);
 
-    const PLAY_SVG = '<polygon points="6,4 20,12 6,20"></polygon>';
-    const PAUSE_SVG = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+  const PLAY = '<polygon points="6,4 20,12 6,20"></polygon>';
+  const PAUSE = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
 
-    audio.volume = parseFloat(volumeSlider.value);
+  function setUI(live, text) {
+    if (!rec) label.textContent = text;
+    dot.classList.toggle("active", live);
+    playIcon.innerHTML = (live || isPlaying) ? PAUSE : PLAY;
+  }
+  function note(text) { msg.textContent = text; dl.style.display = shareBtn.style.display = "none"; panel.classList.add("show"); }
+  function clearTimers() { if (failTimer) clearTimeout(failTimer); failTimer = null; }
 
-    function setUI(live, label) {
-      if (!isRecording) liveLabel.textContent = label;
-      if (live) {
-        statusDot.classList.add("active");
-        playIcon.innerHTML = PAUSE_SVG;
-      } else {
-        statusDot.classList.remove("active");
-        playIcon.innerHTML = isPlaying ? PAUSE_SVG : PLAY_SVG;
-      }
+  // ---------- Playback with failover ----------
+  function scheduleFailover() {
+    if (failTimer || !isPlaying) return;
+    isFlowing = false; setUI(false, "Reconnecting...");
+    failTimer = setTimeout(() => { clearTimers(); idx = (idx + 1) % STREAMS.length; connect(idx); }, FAILOVER_MS);
+  }
+  function connect(i) {
+    clearTimers(); isFlowing = false; lastTime = -1;
+    setUI(false, "Connecting...");
+    // CORS mode is required to record; fall back to plain playback if a server refuses it
+    if (noCors.has(i) && !ctx) audio.removeAttribute("crossorigin"); else audio.crossOrigin = "anonymous";
+    audio.src = STREAMS[i];
+    audio.load();
+    scheduleFailover();
+    const p = audio.play();
+    if (p && p.catch) p.catch(() => {});
+  }
+  function onFlow() {
+    isFlowing = true; lastTime = audio.currentTime; clearTimers(); setUI(true, "Live");
+    if (pendingRec) { pendingRec = false; beginCapture(); }
+  }
+  audio.addEventListener("playing", onFlow);
+  audio.addEventListener("waiting", () => { if (isPlaying && isFlowing) scheduleFailover(); });
+  audio.addEventListener("stalled", () => { if (isPlaying && isFlowing) scheduleFailover(); });
+  audio.addEventListener("error", () => {
+    if (!isPlaying) return;
+    if (!ctx && !noCors.has(idx) && audio.crossOrigin) { noCors.add(idx); connect(idx); return; } // retry w/o CORS
+    scheduleFailover();
+  });
+  audio.addEventListener("ended", () => { if (isPlaying) { clearTimers(); idx = (idx + 1) % STREAMS.length; connect(idx); } });
+
+  function startWatchdog() {
+    clearInterval(watchdog);
+    watchdog = setInterval(() => {
+      if (!isPlaying || !isFlowing) return;
+      if (audio.currentTime === lastTime && !failTimer) scheduleFailover();
+      else if (audio.currentTime !== lastTime) { lastTime = audio.currentTime; if (failTimer) { clearTimers(); setUI(true, "Live"); } }
+    }, 2500);
+  }
+  function startRadio() { isPlaying = true; startWatchdog(); connect(idx); }
+  function stopRadio() {
+    pendingRec = false;
+    stopRecording(true);
+    isPlaying = false; isFlowing = false; clearTimers(); clearInterval(watchdog);
+    audio.pause(); audio.removeAttribute("src"); audio.load();
+    setUI(false, "Tap to Listen");
+  }
+
+  playBtn.addEventListener("click", e => { e.stopPropagation(); isPlaying ? stopRadio() : startRadio(); });
+  volBtn.addEventListener("click", e => { e.stopPropagation(); volPop.classList.toggle("open"); });
+  document.addEventListener("click", () => volPop.classList.remove("open"));
+  volPop.addEventListener("click", e => e.stopPropagation());
+  vol.addEventListener("input", e => {
+    const v = parseFloat(e.target.value);
+    if (gainNode) gainNode.gain.value = v; else audio.volume = v;
+  });
+
+  // ---------- Audio graph (created once, only when recording is first used) ----------
+  function ensureGraph() {
+    if (ctx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    try { ctx = new AC({ sampleRate: 44100 }); } catch (_) { ctx = new AC(); }
+    srcNode = ctx.createMediaElementSource(audio);
+    gainNode = ctx.createGain();
+    gainNode.gain.value = parseFloat(vol.value);
+    audio.volume = 1;                       // listening volume is applied by the gain node,
+    srcNode.connect(gainNode);              // so recordings are always full level
+    gainNode.connect(ctx.destination);
+  }
+
+  // ---------- Encoders ----------
+  function resample(f, from, to) {
+    if (from === to) return f;
+    const n = Math.floor(f.length * to / from), out = new Float32Array(n), r = from / to;
+    for (let i = 0; i < n; i++) {
+      const p = i * r, a = p | 0, b = Math.min(a + 1, f.length - 1);
+      out[i] = f[a] + (f[b] - f[a]) * (p - a);
     }
+    return out;
+  }
+  function toInt16(f) {
+    const o = new Int16Array(f.length);
+    for (let i = 0; i < f.length; i++) { const s = Math.max(-1, Math.min(1, f[i])); o[i] = s < 0 ? s * 32768 : s * 32767; }
+    return o;
+  }
+  function mp3Sink(rate) {
+    const target = MP3_RATES.includes(rate) ? rate : 44100;
+    const enc = new lamejs.Mp3Encoder(2, target, 128), parts = [];
+    return {
+      ext: "mp3",
+      push(l, r) {
+        const b = enc.encodeBuffer(toInt16(resample(l, rate, target)), toInt16(resample(r, rate, target)));
+        if (b.length) parts.push(new Uint8Array(b));
+      },
+      finish() { const b = enc.flush(); if (b.length) parts.push(new Uint8Array(b)); return new Blob(parts, { type: "audio/mpeg" }); }
+    };
+  }
+  function loadLame() {
+    if (window.lamejs) return Promise.resolve(true);
+    return LAME_URLS.reduce((p, u) => p.then(ok => ok || new Promise(res => {
+      const s = document.createElement("script");
+      s.src = u; s.crossOrigin = "anonymous"; s.referrerPolicy = "no-referrer";
+      s.onload = () => res(!!window.lamejs); s.onerror = () => { s.remove(); res(false); };
+      document.head.appendChild(s);
+    })), Promise.resolve(false));
+  }
 
-    function clearTimers() {
-      if (failoverTimer) clearTimeout(failoverTimer);
-      failoverTimer = null;
-    }
+  // ---------- Recording ----------
+  async function beginCapture() {
+    if (rec || starting) return;
+    if (noCors.has(idx)) { note("This stream's server doesn't allow recording. Try again later."); return; }
+    starting = true;
+    try {
+      ensureGraph();
+      await ctx.resume();            // inside the tap's gesture window (needed on iOS)
+      if (!(await loadLame())) { note("The MP3 encoder couldn't load. Check your connection and try again."); return; }
+      const rate = ctx.sampleRate;
+      const r = { sink: mp3Sink(rate), queue: [], frames: 0, rate, peak: 0, cap: MAX_SEC };
+      const proc = ctx.createScriptProcessor(4096, 2, 2), mute = ctx.createGain();
+      mute.gain.value = 0;
+      proc.onaudioprocess = ev => {
+        if (rec !== r) return;
+        const l = ev.inputBuffer.getChannelData(0), rr = ev.inputBuffer.numberOfChannels > 1 ? ev.inputBuffer.getChannelData(1) : l;
+        r.queue.push([l.slice(), rr.slice()]); r.frames += l.length;
+        if (!r.peak) for (let i = 0; i < l.length; i++) if (l[i]) { r.peak = 1; break; }
+        drain(r, 6);
+        const sec = r.frames / rate;
+        if (sec > 8 && !r.peak) { setTimeout(() => stopRecording(false, "No audio could be captured: this stream blocks recording."), 0); }
+        else if (sec >= r.cap) setTimeout(() => stopRecording(true, "Maximum length reached. Recording saved."), 0);
+      };
+      srcNode.connect(proc); proc.connect(mute); mute.connect(ctx.destination);
+      Object.assign(r, { proc, mute });
+      rec = r;
+      recBtn.classList.add("recording");
+      closePanel();
+      r.timer = setInterval(() => {
+        const s = Math.floor(r.frames / rate);
+        label.textContent = "Rec " + String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+      }, 500);
+      label.textContent = "Rec 00:00";
+    } catch (err) {
+      rec = null; note("Recording isn't supported on this browser or stream.");
+    } finally { starting = false; }
+  }
+  function drain(r, budgetMs) {
+    const t = performance.now();
+    while (r.queue.length && (budgetMs == null || performance.now() - t < budgetMs)) { const [l, rr] = r.queue.shift(); r.sink.push(l, rr); }
+  }
+  function stopRecording(save = true, text) {
+    if (!rec) return;
+    const r = rec; rec = null;
+    clearInterval(r.timer);
+    try { srcNode.disconnect(r.proc); r.proc.disconnect(); r.mute.disconnect(); r.proc.onaudioprocess = null; } catch (_) {}
+    recBtn.classList.remove("recording");
+    label.textContent = isPlaying ? (isFlowing ? "Live" : "Connecting...") : "Tap to Listen";
+    if (!save) { note(text || "Recording discarded."); return; }
+    try {
+      drain(r, null);
+      const blob = r.sink.finish();
+      if (r.frames / r.rate < 1 || !blob.size) { note("Recording was too short to save."); return; }
+      deliver(blob, r.sink.ext, Math.round(r.frames / r.rate), text);
+    } catch (e) { note("Could not save the recording."); }
+  }
 
-    function scheduleFailover() {
-      if (failoverTimer || !isPlaying) return;
-      setUI(false, "Switching...");
+  // ---------- Delivery: auto-download + fallback Download/Share buttons ----------
+  function deliver(blob, ext, sec, text) {
+    if (objUrl) URL.revokeObjectURL(objUrl);
+    objUrl = URL.createObjectURL(blob);
+    const d = new Date(), p = n => String(n).padStart(2, "0");
+    const name = `Jesus-Is-LORD-Radio-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.${ext}`;
+    const mb = (blob.size / 1048576).toFixed(1);
+    msg.textContent = (text ? text + " " : "") + `Saved ${Math.floor(sec / 60)}:${p(sec % 60)} (${mb} MB, ${ext.toUpperCase()}).`;
+    dl.href = objUrl; dl.download = name; dl.style.display = "";
+    const file = new File([blob], name, { type: blob.type });
+    const canShare = navigator.canShare && navigator.canShare({ files: [file] });
+    shareBtn.style.display = canShare ? "" : "none";
+    shareBtn.onclick = () => navigator.share({ files: [file], title: "Jesus Is LORD Radio recording" }).catch(() => {});
+    panel.classList.add("show");
+    try { dl.click(); } catch (_) {}
+  }
+  function closePanel() {
+    panel.classList.remove("show");
+    if (objUrl && !rec) { /* keep URL alive until replaced so the link keeps working */ }
+  }
+  $("jil-x").addEventListener("click", () => { panel.classList.remove("show"); if (objUrl) { URL.revokeObjectURL(objUrl); objUrl = null; } });
 
-      failoverTimer = setTimeout(() => {
-        clearTimers();
-        currentIdx = (currentIdx + 1) % STREAMS.length;
-        connectStream(currentIdx);
-      }, FAILOVER_MS);
-    }
-
-    function connectStream(index) {
-      clearTimers();
-      setUI(false, "Connecting...");
-
-      audio.src = STREAMS[index];
-      audio.load();
-
-      scheduleFailover();
-
-      audio.play().then(() => {
-        clearTimers();
-        setUI(true, "Live");
-      }).catch(() => {
-        scheduleFailover();
-      });
-    }
-
-    audio.addEventListener("playing", () => {
-      clearTimers();
-      setUI(true, "Live");
-    });
-
-    audio.addEventListener("error", () => {
-      if (isPlaying) scheduleFailover();
-    });
-
-    audio.addEventListener("ended", () => {
-      if (isPlaying) {
-        clearTimers();
-        currentIdx = (currentIdx + 1) % STREAMS.length;
-        connectStream(currentIdx);
-      }
-    });
-
-    function startRadio() {
-      isPlaying = true;
-      connectStream(currentIdx);
-    }
-
-    function stopRadio() {
-      isPlaying = false;
-      clearTimers();
-      audio.pause();
-      audio.removeAttribute("src");
-      audio.load();
-      setUI(false, "Tap to Listen");
-      if (isRecording) stopRecording();
-    }
-
-    playBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (!isPlaying) startRadio();
-      else stopRadio();
-    });
-
-    volBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      volPopover.classList.toggle("open");
-    });
-
-    document.addEventListener("click", () => {
-      volPopover.classList.remove("open");
-    });
-
-    volPopover.addEventListener("click", (e) => e.stopPropagation());
-
-    volumeSlider.addEventListener("input", (e) => {
-      audio.volume = parseFloat(e.target.value);
-    });
-
-    // =========================================================
-    // TRUE MP3 RECORDING ENGINE (lamejs)
-    // =========================================================
-    let isRecording = false;
-    let recInterval = null;
-    let recSeconds = 0;
-    let recAudio = null;
-    let audioCtxRec = null;
-    let scriptProcessor = null;
-    let mp3Encoder = null;
-    let mp3DataChunks = [];
-
-    function startRecording() {
-      if (!isPlaying) startRadio();
-
-      if (typeof lamejs === 'undefined') {
-        alert("MP3 encoder library is still loading. Please try again in a moment.");
-        return;
-      }
-
-      try {
-        recAudio = new Audio();
-        recAudio.crossOrigin = "anonymous";
-        recAudio.src = STREAMS[currentIdx];
-        recAudio.muted = true;
-
-        recAudio.play().then(() => {
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          audioCtxRec = new AudioContext();
-          const sourceNode = audioCtxRec.createMediaElementSource(recAudio);
-          
-          scriptProcessor = audioCtxRec.createScriptProcessor(4096, 1, 1);
-          mp3Encoder = new lamejs.Mp3Encoder(1, audioCtxRec.sampleRate, 128);
-          mp3DataChunks = [];
-
-          scriptProcessor.onaudioprocess = (e) => {
-            if (!isRecording) return;
-            const leftChannel = e.inputBuffer.getChannelData(0);
-            const sampleChunk = new Int16Array(leftChannel.length);
-            for (let i = 0; i < leftChannel.length; i++) {
-              let s = Math.max(-1, Math.min(1, leftChannel[i]));
-              sampleChunk[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-            }
-
-            const mp3buf = mp3Encoder.encodeBuffer(sampleChunk);
-            if (mp3buf.length > 0) {
-              mp3DataChunks.push(new Int8Array(mp3buf));
-            }
-          };
-
-          sourceNode.connect(scriptProcessor);
-          scriptProcessor.connect(audioCtxRec.destination);
-          sourceNode.connect(audioCtxRec.destination);
-
-          isRecording = true;
-          recBtn.classList.add("recording");
-          recSeconds = 0;
-          liveLabel.textContent = "Rec 00:00";
-
-          recInterval = setInterval(() => {
-            recSeconds++;
-            const m = String(Math.floor(recSeconds / 60)).padStart(2, "0");
-            const s = String(recSeconds % 60).padStart(2, "0");
-            liveLabel.textContent = `Rec ${m}:${s}`;
-          }, 1000);
-        }).catch(() => {
-          cleanupMp3Recorder();
-        });
-      } catch (err) {
-        cleanupMp3Recorder();
-      }
-    }
-
-    function cleanupMp3Recorder() {
-      isRecording = false;
-      clearInterval(recInterval);
-      recBtn.classList.remove("recording");
-      liveLabel.textContent = isPlaying ? "Live" : "Tap to Listen";
-      if (scriptProcessor) {
-        scriptProcessor.disconnect();
-        scriptProcessor = null;
-      }
-      if (audioCtxRec) {
-        audioCtxRec.close().catch(() => {});
-        audioCtxRec = null;
-      }
-      if (recAudio) {
-        recAudio.pause();
-        recAudio.removeAttribute("src");
-        recAudio = null;
-      }
-    }
-
-    function stopRecording() {
-      if (!isRecording) return;
-      isRecording = false;
-      clearInterval(recInterval);
-      recBtn.classList.remove("recording");
-      liveLabel.textContent = isPlaying ? "Live" : "Tap to Listen";
-
-      try {
-        if (mp3Encoder) {
-          const mp3buf = mp3Encoder.flush();
-          if (mp3buf.length > 0) {
-            mp3DataChunks.push(new Int8Array(mp3buf));
-          }
-        }
-
-        const blob = new Blob(mp3DataChunks, { type: "audio/mp3" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.style.display = "none";
-        a.href = url;
-        a.download = `Jesus-Is-LORD-Radio-${Date.now()}.mp3`;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }, 100);
-
-        cleanupMp3Recorder();
-      } catch (e) {
-        cleanupMp3Recorder();
-      }
-    }
-
-    recBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (!isRecording) startRecording();
-      else stopRecording();
-    });
-  })();
-  </script>
+  recBtn.addEventListener("click", e => {
+    e.stopPropagation();
+    if (rec) stopRecording(true);
+    else if (pendingRec) { pendingRec = false; label.textContent = isPlaying ? "Live" : "Tap to Listen"; }
+    else if (!isPlaying) { pendingRec = true; label.textContent = "Starting..."; if (!ctx) { try { ensureGraph(); ctx.resume(); } catch (_) {} } startRadio(); }
+    else beginCapture();
+  });
+  window.addEventListener("pagehide", () => { if (rec) stopRecording(true); });
+})();
+</script>
 </body>
 </html>
