@@ -1,0 +1,539 @@
+<!-- BEGINS: JESUS IS LORD RADIO - PILL FAILOVER PLAYER -->
+<style>
+  #jil-pill-player {
+    display: inline-flex;
+    align-items: center;
+    background: #0d1d35;
+    border-radius: 9999px;
+    padding: 6px 14px 6px 6px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #ffffff;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    user-select: none;
+    gap: 12px;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Left Play Badge Button */
+  .jil-logo-btn {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid #9ca3af;
+    background: radial-gradient(circle, #1e3a8a 35%, #d1d5db 36%, #9ca3af 100%);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 0;
+    overflow: hidden;
+    transition: transform 0.15s ease;
+  }
+  .jil-logo-btn:hover { transform: scale(1.04); }
+  .jil-logo-btn:active { transform: scale(0.96); }
+
+  .jil-logo-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+
+  .jil-play-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(13, 29, 53, 0.25);
+  }
+
+  /* Title & Live Status */
+  .jil-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .jil-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    line-height: 1.2;
+  }
+
+  .jil-live-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+  }
+
+  .jil-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #8492a6;
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+
+  .jil-status-dot.active {
+    background: #00e676;
+    box-shadow: 0 0 8px #00e676;
+  }
+
+  .jil-live-text {
+    font-size: 12px;
+    color: #cbd5e1;
+    font-weight: 400;
+  }
+
+  /* Circle Action Buttons (Record & Volume) */
+  .jil-circle-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 4px;
+  }
+
+  .jil-circle-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: transparent;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .jil-circle-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.45);
+  }
+
+  /* Record Dot */
+  .jil-rec-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ffffff;
+    transition: all 0.2s ease;
+  }
+
+  .jil-circle-btn.recording {
+    border-color: #ff5252;
+    background: rgba(255, 82, 82, 0.15);
+  }
+
+  .jil-circle-btn.recording .jil-rec-dot {
+    background: #ff5252;
+    box-shadow: 0 0 8px #ff5252;
+    animation: jilPulse 1.2s infinite;
+  }
+
+  /* Volume Vertical Popover */
+  .jil-vol-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .jil-vol-popover {
+    position: absolute;
+    bottom: 46px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0d1d35;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 20px;
+    padding: 10px 6px;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+  }
+
+  .jil-vol-wrapper:hover .jil-vol-popover,
+  .jil-vol-popover.open {
+    display: flex;
+  }
+
+  .jil-vol-slider {
+    writing-mode: vertical-lr;
+    direction: rtl;
+    width: 4px;
+    height: 64px;
+    accent-color: #facc15;
+    cursor: pointer;
+  }
+
+  @keyframes jilPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+  }
+</style>
+
+<div id="jil-pill-player">
+  <!-- Left Play/Pause Button -->
+  <button id="jil-play-btn" class="jil-logo-btn" aria-label="Play or Pause" title="Play / Pause">
+    <!-- Optional Logo Image: <img src="YOUR_LOGO_URL.png" alt="Jesus Is LORD Radio"> -->
+    <div class="jil-play-overlay">
+      <svg id="jil-play-icon" width="20" height="20" viewBox="0 0 24 24" fill="#facc15">
+        <polygon points="6,4 20,12 6,20"></polygon>
+      </svg>
+    </div>
+  </button>
+
+  <!-- Title & Live Status -->
+  <div class="jil-info">
+    <div class="jil-title">Jesus Is LORD Radio</div>
+    <div class="jil-live-row">
+      <span id="jil-dot" class="jil-status-dot"></span>
+      <span id="jil-live-label" class="jil-live-text">Live</span>
+    </div>
+  </div>
+
+  <!-- Circular Record & Volume Buttons -->
+  <div class="jil-circle-controls">
+    <!-- Record Button -->
+    <button id="jil-rec-btn" class="jil-circle-btn" aria-label="Record Live Audio" title="Record Audio">
+      <span class="jil-rec-dot"></span>
+    </button>
+
+    <!-- Volume Button + Vertical Slider -->
+    <div class="jil-vol-wrapper">
+      <button id="jil-vol-btn" class="jil-circle-btn" aria-label="Volume" title="Volume">
+        <svg id="jil-vol-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        </svg>
+      </button>
+      <div id="jil-vol-popover" class="jil-vol-popover">
+        <input type="range" id="jil-volume" class="jil-vol-slider" min="0" max="1" step="0.01" value="0.85">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // =========================================================
+  // 1. CONFIGURE YOUR 4 AUDIO STREAM LINKS HERE
+  // =========================================================
+  const STREAMS = [
+    { name: "Stream 1", url: "https://stream.zeno.fm/thdtw5xd9eiuv" },
+    { name: "Stream 2", url: "https://stream.zeno.fm/thdtw5xd9eiuv" }, // <-- Replace with Link 2
+    { name: "Stream 3", url: "https://stream.zeno.fm/thdtw5xd9eiuv" }, // <-- Replace with Link 3
+    { name: "Stream 4", url: "https://stream.zeno.fm/thdtw5xd9eiuv" }  // <-- Replace with Link 4
+  ];
+
+  const FAILOVER_SECONDS = 10;
+
+  // =========================================================
+  // 2. DUAL-AUDIO 24/7 FAILOVER ENGINE
+  // =========================================================
+  let currentIdx = 0;
+  let isPlaying = false;
+  let failoverTimer = null;
+  let watchdogTimer = null;
+  let lastTime = 0;
+
+  const playerA = new Audio();
+  const playerB = new Audio();
+  playerA.preload = "none";
+  playerB.preload = "none";
+
+  let active = playerA;
+  let standby = playerB;
+
+  const playBtn = document.getElementById("jil-play-btn");
+  const playIcon = document.getElementById("jil-play-icon");
+  const statusDot = document.getElementById("jil-dot");
+  const liveLabel = document.getElementById("jil-live-label");
+  const volumeSlider = document.getElementById("jil-volume");
+  const volBtn = document.getElementById("jil-vol-btn");
+  const volPopover = document.getElementById("jil-vol-popover");
+  const recBtn = document.getElementById("jil-rec-btn");
+
+  const PLAY_SVG = '<polygon points="6,4 20,12 6,20"></polygon>';
+  const PAUSE_SVG = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+
+  active.volume = volumeSlider.value;
+  standby.volume = volumeSlider.value;
+
+  function setLiveState(live) {
+    if (live) {
+      statusDot.classList.add("active");
+      playIcon.innerHTML = PAUSE_SVG;
+    } else {
+      statusDot.classList.remove("active");
+      if (!isPlaying) playIcon.innerHTML = PLAY_SVG;
+    }
+  }
+
+  let audioCtx = null;
+  function keepAlive() {
+    try {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AC();
+      }
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      gain.gain.value = 0.0001;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+    } catch (e) {}
+  }
+
+  function clearFailoverTimer() {
+    if (failoverTimer) clearTimeout(failoverTimer);
+    failoverTimer = null;
+  }
+
+  function triggerFailover() {
+    if (failoverTimer || !isPlaying) return;
+    setLiveState(false);
+
+    failoverTimer = setTimeout(() => {
+      clearFailoverTimer();
+      currentIdx = (currentIdx + 1) % STREAMS.length;
+      connectStream(currentIdx);
+    }, FAILOVER_SECONDS * 1000);
+  }
+
+  function bindEvents(audio) {
+    audio.onplaying = () => {
+      clearFailoverTimer();
+      setLiveState(true);
+    };
+    audio.onwaiting = () => { if (isPlaying) triggerFailover(); };
+    audio.onstalled = () => { if (isPlaying) triggerFailover(); };
+    audio.onerror   = () => { if (isPlaying) triggerFailover(); };
+    audio.onended   = () => {
+      if (isPlaying) {
+        clearFailoverTimer();
+        currentIdx = (currentIdx + 1) % STREAMS.length;
+        connectStream(currentIdx);
+      }
+    };
+  }
+
+  function connectStream(index) {
+    clearFailoverTimer();
+    const stream = STREAMS[index];
+    const sep = stream.url.includes("?") ? "&" : "?";
+    standby.src = `${stream.url}${sep}_t=${Date.now()}`;
+    standby.volume = parseFloat(volumeSlider.value);
+
+    triggerFailover();
+
+    const promise = standby.play();
+    if (promise !== undefined) {
+      promise.then(() => {
+        active.pause();
+        active.removeAttribute("src");
+        active.load();
+
+        const temp = active;
+        active = standby;
+        standby = temp;
+
+        bindEvents(active);
+        clearFailoverTimer();
+        setLiveState(true);
+      }).catch((err) => {
+        if (err.name === "NotAllowedError") {
+          standby.muted = true;
+          standby.play().then(() => {
+            active = standby;
+            bindEvents(active);
+            setLiveState(true);
+
+            const unlockAudio = () => {
+              active.muted = false;
+              window.removeEventListener("click", unlockAudio);
+              window.removeEventListener("touchstart", unlockAudio);
+            };
+            window.addEventListener("click", unlockAudio);
+            window.addEventListener("touchstart", unlockAudio);
+          }).catch(() => {
+            isPlaying = false;
+            setLiveState(false);
+          });
+        }
+      });
+    }
+  }
+
+  function startWatchdog() {
+    if (watchdogTimer) clearInterval(watchdogTimer);
+    watchdogTimer = setInterval(() => {
+      if (!isPlaying) return;
+      if (active.currentTime === lastTime && !failoverTimer) {
+        triggerFailover();
+      } else if (active.currentTime !== lastTime) {
+        lastTime = active.currentTime;
+        if (failoverTimer) {
+          clearFailoverTimer();
+          setLiveState(true);
+        }
+      }
+    }, 2000);
+  }
+
+  function startRadio() {
+    isPlaying = true;
+    playIcon.innerHTML = PAUSE_SVG;
+    keepAlive();
+    startWatchdog();
+    connectStream(currentIdx);
+  }
+
+  function stopRadio() {
+    isPlaying = false;
+    clearFailoverTimer();
+    if (watchdogTimer) clearInterval(watchdogTimer);
+    active.pause();
+    active.removeAttribute("src");
+    standby.pause();
+    standby.removeAttribute("src");
+    setLiveState(false);
+    if (mediaRecorder && mediaRecorder.state !== "inactive") stopRecording();
+  }
+
+  playBtn.addEventListener("click", () => {
+    if (!isPlaying) startRadio();
+    else stopRadio();
+  });
+
+  // Volume Control Popover
+  volBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    volPopover.classList.toggle("open");
+  });
+
+  document.addEventListener("click", () => {
+    volPopover.classList.remove("open");
+  });
+
+  volPopover.addEventListener("click", (e) => e.stopPropagation());
+
+  volumeSlider.addEventListener("input", (e) => {
+    const vol = parseFloat(e.target.value);
+    active.volume = vol;
+    standby.volume = vol;
+  });
+
+  // =========================================================
+  // 3. INDEPENDENT AUDIO RECORDING
+  // =========================================================
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let recordingInterval = null;
+  let recSeconds = 0;
+  let recorderAudio = null;
+
+  function startRecording() {
+    if (!isPlaying) {
+      startRadio();
+    }
+    try {
+      recorderAudio = new Audio();
+      const currentStreamUrl = STREAMS[currentIdx].url;
+      recorderAudio.src = `${currentStreamUrl}${currentStreamUrl.includes("?") ? "&" : "?"}_rec=${Date.now()}`;
+      recorderAudio.crossOrigin = "anonymous";
+      recorderAudio.muted = true;
+
+      recorderAudio.play().then(() => {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AC();
+        const dest = ctx.createMediaStreamDestination();
+        const sourceNode = ctx.createMediaElementSource(recorderAudio);
+        sourceNode.connect(dest);
+
+        mediaRecorder = new MediaRecorder(dest.stream, { mimeType: "audio/webm" });
+        recordedChunks = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: "audio/webm" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.style.display = "none";
+          a.href = url;
+          a.download = `Jesus-Is-LORD-Radio-${Date.now()}.webm`;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+          }, 100);
+          if (recorderAudio) {
+            recorderAudio.pause();
+            recorderAudio.src = "";
+            recorderAudio = null;
+          }
+        };
+
+        mediaRecorder.start();
+        recBtn.classList.add("recording");
+        recSeconds = 0;
+        liveLabel.textContent = "Rec 00:00";
+
+        recordingInterval = setInterval(() => {
+          recSeconds++;
+          const m = Math.floor(recSeconds / 60).toString().padStart(2, "0");
+          const s = (recSeconds % 60).toString().padStart(2, "0");
+          liveLabel.textContent = `Rec ${m}:${s}`;
+        }, 1000);
+      }).catch(() => {
+        alert("Unable to capture stream for recording on this network.");
+      });
+    } catch (e) {
+      alert("Audio recording is not supported in this browser.");
+    }
+  }
+
+  function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+    }
+    clearInterval(recordingInterval);
+    recBtn.classList.remove("recording");
+    liveLabel.textContent = "Live";
+  }
+
+  recBtn.addEventListener("click", () => {
+    if (!mediaRecorder || mediaRecorder.state === "inactive") {
+      startRecording();
+    } else {
+      stopRecording();
+    }
+  });
+
+  // Auto-start on page load
+  window.addEventListener("DOMContentLoaded", () => {
+    startRadio();
+  });
+})();
+</script>
+<!-- ENDS: JESUS IS LORD RADIO - PILL FAILOVER PLAYER -->
