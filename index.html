@@ -213,7 +213,7 @@
       <div class="jil-title">Jesus Is LORD Radio</div>
       <div class="jil-live-row">
         <span id="jil-dot" class="jil-status-dot"></span>
-        <span id="jil-live-label" class="jil-live-text">Live</span>
+        <span id="jil-live-label" class="jil-live-text">Tap to Listen</span>
       </div>
     </div>
 
@@ -246,10 +246,10 @@
     // 1. CONFIGURE YOUR 4 AUDIO STREAM LINKS HERE
     // =========================================================
     const STREAMS = [
-      { name: "Stream 1", url: "https://stream.zeno.fm/thdtw5xd9eiuv" },
-      { name: "Stream 2", url: "https://s3.radio.co/s97f38db97/listen" }, // <-- Replace with Link 2
-      { name: "Stream 3", url: "https://stream.zeno.fm/3gdtad95608uv" }, // <-- Replace with Link 3
-      { name: "Stream 4", url: "https://stream.zeno.fm/thdtw5xd9eiuv" }  // <-- Replace with Link 4
+      { name: "Primary Stream (Radio.co)", url: "https://s3.radio.co/s97f38db97/listen" },
+      { name: "Backup Stream 1 (Zeno)", url: "https://stream.zeno.fm/3gdtad95608uv" },
+      { name: "Backup Stream 2 (Zeno)", url: "https://stream.zeno.fm/thdtw5xd9eiuv" },
+      { name: "Backup Stream 3 (Loop)",  url: "https://s3.radio.co/s97f38db97/listen" }
     ];
 
     const FAILOVER_SECONDS = 10;
@@ -259,9 +259,10 @@
     // =========================================================
     let currentIdx = 0;
     let isPlaying = false;
+    let isStreamFlowing = false;
     let failoverTimer = null;
     let watchdogTimer = null;
-    let lastTime = 0;
+    let lastTime = -1;
 
     const playerA = new Audio();
     const playerB = new Audio();
@@ -286,37 +287,22 @@
     active.volume = parseFloat(volumeSlider.value);
     standby.volume = parseFloat(volumeSlider.value);
 
-    function setLiveState(live) {
+    function setLiveState(live, labelText = "Live") {
       if (live) {
         statusDot.classList.add("active");
         playIcon.innerHTML = PAUSE_SVG;
         if (!mediaRecorder || mediaRecorder.state === "inactive") {
-          liveLabel.textContent = "Live";
+          liveLabel.textContent = labelText;
         }
       } else {
         statusDot.classList.remove("active");
         if (!isPlaying) {
           playIcon.innerHTML = PLAY_SVG;
-          liveLabel.textContent = "Live";
+        }
+        if (!mediaRecorder || mediaRecorder.state === "inactive") {
+          liveLabel.textContent = labelText;
         }
       }
-    }
-
-    let audioCtx = null;
-    function keepAlive() {
-      try {
-        if (!audioCtx) {
-          const AC = window.AudioContext || window.webkitAudioContext;
-          audioCtx = new AC();
-        }
-        if (audioCtx.state === "suspended") audioCtx.resume();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        gain.gain.value = 0.0001;
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-      } catch (e) {}
     }
 
     function clearFailoverTimer() {
@@ -326,37 +312,49 @@
 
     function triggerFailover() {
       if (failoverTimer || !isPlaying) return;
-      setLiveState(false);
+      isStreamFlowing = false;
+      setLiveState(false, "Switching...");
 
       failoverTimer = setTimeout(() => {
         clearFailoverTimer();
         currentIdx = (currentIdx + 1) % STREAMS.length;
-        connectStream(currentIdx);
+        connectStream(currentIdx, false);
       }, FAILOVER_SECONDS * 1000);
     }
 
     function bindEvents(audio) {
       audio.onplaying = () => {
+        isStreamFlowing = true;
+        lastTime = audio.currentTime;
         clearFailoverTimer();
-        setLiveState(true);
+        setLiveState(true, "Live");
       };
-      audio.onwaiting = () => { if (isPlaying) triggerFailover(); };
-      audio.onstalled = () => { if (isPlaying) triggerFailover(); };
-      audio.onerror   = () => { if (isPlaying) triggerFailover(); };
-      audio.onended   = () => {
+      audio.onwaiting = () => {
+        if (isPlaying && isStreamFlowing) triggerFailover();
+      };
+      audio.onstalled = () => {
+        if (isPlaying && isStreamFlowing) triggerFailover();
+      };
+      audio.onerror = () => {
+        if (isPlaying) triggerFailover();
+      };
+      audio.onended = () => {
         if (isPlaying) {
           clearFailoverTimer();
           currentIdx = (currentIdx + 1) % STREAMS.length;
-          connectStream(currentIdx);
+          connectStream(currentIdx, false);
         }
       };
     }
 
     function connectStream(index, isAutoplayAttempt = false) {
       clearFailoverTimer();
-      const stream = STREAMS[index];
+      isStreamFlowing = false;
+      lastTime = -1;
 
-      // IMPORTANT: Do NOT append ?_t= query parameters to Zeno.fm links
+      const stream = STREAMS[index];
+      setLiveState(false, "Connecting...");
+
       standby.muted = false;
       standby.src = stream.url;
       standby.volume = parseFloat(volumeSlider.value);
@@ -374,27 +372,25 @@
           active = standby;
           standby = temp;
 
+          isStreamFlowing = true;
+          lastTime = active.currentTime;
           bindEvents(active);
           clearFailoverTimer();
-          setLiveState(true);
+          setLiveState(true, "Live");
         }).catch((err) => {
           clearFailoverTimer();
           if (err.name === "NotAllowedError" && isAutoplayAttempt) {
-            // Browser blocked unmuted autoplay: reset cleanly so clicking Play works immediately
             isPlaying = false;
-            setLiveState(false);
-            liveLabel.textContent = "Tap to Listen";
+            setLiveState(false, "Tap to Listen");
 
-            // Also unlock audio automatically on first click anywhere on the page
             const unlockOnGesture = () => {
               window.removeEventListener("click", unlockOnGesture);
               window.removeEventListener("touchstart", unlockOnGesture);
-              if (!isPlaying) startRadio();
+              if (!isPlaying) startRadio(false);
             };
             window.addEventListener("click", unlockOnGesture);
             window.addEventListener("touchstart", unlockOnGesture);
           } else {
-            // Stream network error: wait 10s then try next backup link
             triggerFailover();
           }
         });
@@ -404,29 +400,30 @@
     function startWatchdog() {
       if (watchdogTimer) clearInterval(watchdogTimer);
       watchdogTimer = setInterval(() => {
-        if (!isPlaying) return;
+        if (!isPlaying || !isStreamFlowing) return;
+
         if (active.currentTime === lastTime && !failoverTimer) {
           triggerFailover();
         } else if (active.currentTime !== lastTime) {
           lastTime = active.currentTime;
           if (failoverTimer) {
             clearFailoverTimer();
-            setLiveState(true);
+            setLiveState(true, "Live");
           }
         }
-      }, 2000);
+      }, 2500);
     }
 
     function startRadio(isAutoplayAttempt = false) {
       isPlaying = true;
       playIcon.innerHTML = PAUSE_SVG;
-      keepAlive();
       startWatchdog();
       connectStream(currentIdx, isAutoplayAttempt);
     }
 
     function stopRadio() {
       isPlaying = false;
+      isStreamFlowing = false;
       clearFailoverTimer();
       if (watchdogTimer) clearInterval(watchdogTimer);
       active.pause();
@@ -435,7 +432,7 @@
       standby.pause();
       standby.removeAttribute("src");
       standby.load();
-      setLiveState(false);
+      setLiveState(false, "Live");
       if (mediaRecorder && mediaRecorder.state !== "inactive") stopRecording();
     }
 
@@ -445,7 +442,6 @@
       else stopRadio();
     });
 
-    // Volume Control Popover
     volBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       volPopover.classList.toggle("open");
@@ -455,4 +451,107 @@
       volPopover.classList.remove("open");
     });
 
-    volPopover.addEventListener("click", (e) => e.stopPropagation
+    volPopover.addEventListener("click", (e) => e.stopPropagation());
+
+    volumeSlider.addEventListener("input", (e) => {
+      const vol = parseFloat(e.target.value);
+      active.volume = vol;
+      standby.volume = vol;
+    });
+
+    // =========================================================
+    // 3. INDEPENDENT AUDIO RECORDING
+    // =========================================================
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let recordingInterval = null;
+    let recSeconds = 0;
+    let recorderAudio = null;
+
+    function startRecording() {
+      if (!isPlaying) startRadio(false);
+      try {
+        recorderAudio = new Audio();
+        recorderAudio.src = STREAMS[currentIdx].url;
+        recorderAudio.crossOrigin = "anonymous";
+        recorderAudio.muted = true;
+
+        recorderAudio.play().then(() => {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          const ctx = new AC();
+          const dest = ctx.createMediaStreamDestination();
+          const sourceNode = ctx.createMediaElementSource(recorderAudio);
+          sourceNode.connect(dest);
+
+          mediaRecorder = new MediaRecorder(dest.stream, { mimeType: "audio/webm" });
+          recordedChunks = [];
+
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) recordedChunks.push(e.data);
+          };
+
+          mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type: "audio/webm" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.style.display = "none";
+            a.href = url;
+            a.download = `Jesus-Is-LORD-Radio-${Date.now()}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+              document.body.removeChild(a);
+              window.URL.revokeObjectURL(url);
+            }, 100);
+            if (recorderAudio) {
+              recorderAudio.pause();
+              recorderAudio.src = "";
+              recorderAudio = null;
+            }
+          };
+
+          mediaRecorder.start();
+          recBtn.classList.add("recording");
+          recSeconds = 0;
+          liveLabel.textContent = "Rec 00:00";
+
+          recordingInterval = setInterval(() => {
+            recSeconds++;
+            const m = Math.floor(recSeconds / 60).toString().padStart(2, "0");
+            const s = (recSeconds % 60).toString().padStart(2, "0");
+            liveLabel.textContent = `Rec ${m}:${s}`;
+          }, 1000);
+        }).catch(() => {
+          alert("Unable to capture stream for recording (CORS restriction).");
+        });
+      } catch (e) {
+        alert("Audio recording is not supported in this browser.");
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+      }
+      clearInterval(recordingInterval);
+      recBtn.classList.remove("recording");
+      liveLabel.textContent = "Live";
+    }
+
+    recBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!mediaRecorder || mediaRecorder.state === "inactive") {
+        startRecording();
+      } else {
+        stopRecording();
+      }
+    });
+
+    // Attempt autoplay on page load
+    window.addEventListener("DOMContentLoaded", () => {
+      startRadio(true);
+    });
+  })();
+  </script>
+</body>
+</html>
