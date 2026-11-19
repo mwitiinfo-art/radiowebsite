@@ -81,11 +81,12 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;background:transparent!
     "https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"
   ];
   const FAILOVER_MS = 10000;
+  const AUTOPLAY = true;     // try to start on page load (browsers often block it; listeners then just tap play)
   const MAX_SEC = 7200;      // 2-hour memory safety cap
   const MP3_RATES = [8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000];
 
   let idx = 0, isPlaying = false, isFlowing = false, failTimer = null, watchdog = null, lastTime = -1;
-  let rec = null, starting = false, pendingRec = false, objUrl = null;
+  let rec = null, starting = false, pendingRec = false, objUrl = null, autoTry = false;
   let ctx = null, srcNode = null, gainNode = null, an = null, abuf = null;
   const noCors = new Set(); // streams that only play without CORS (cannot be recorded)
 
@@ -160,9 +161,10 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;background:transparent!
     audio.load();
     scheduleFailover();
     const p = audio.play();
-    if (p && p.catch) p.catch(() => {});
+    if (p && p.catch) p.catch(e => { if (autoTry && e && e.name === "NotAllowedError") stopRadio(); });
   }
-  function onFlow() { if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
+  function onFlow() { if (autoTry) { autoTry = false; if (ctx && ctx.state !== "running") { stopRadio(); return; } }
+    if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
     isFlowing = true; lastTime = audio.currentTime; clearTimers(); setUI(true, "LIVE");
     if (pendingRec) { pendingRec = false; beginCapture(); }
   }
@@ -202,7 +204,7 @@ wire(corsAudio);
   }
   function startRadio() { isPlaying = true; try { ensureGraph(); ctx.resume(); } catch (_) {} startWatchdog(); connect(idx); }
   function stopRadio() {
-    pendingRec = false;
+    autoTry = false; pendingRec = false;
     stopRecording(true);
     isPlaying = false; isFlowing = false; clearTimers(); clearInterval(watchdog);
     audio.pause(); audio.removeAttribute("src"); audio.load();
@@ -355,6 +357,7 @@ wire(corsAudio);
     else if (!isPlaying) { pendingRec = true; label.textContent = "Starting..."; if (!ctx) { try { ensureGraph(); ctx.resume(); } catch (_) {} } startRadio(); }
     else beginCapture();
   });
+  if (AUTOPLAY) window.addEventListener("load", () => { autoTry = true; try { startRadio(); } catch (_) { autoTry = false; } });
   window.addEventListener("pagehide", () => { if (rec) stopRecording(true); });
 })();
 </script>
