@@ -7,34 +7,34 @@
 <meta name="referrer" content="no-referrer">
 <title>Jesus is LORD Radio Player</title>
 <style>
-html,body{margin:0;padding:0;height:100%;overflow:hidden;background:transparent!important;color-scheme:normal}body{display:flex;align-items:flex-end;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;box-sizing:border-box}
-.wrap{position:relative;display:flex;align-items:center;justify-content:center;max-width:100%}
-#jil-pill-player{display:inline-flex;align-items:center;background:#122b52;border-radius:9999px;padding:6px 14px 6px 6px;color:#fff;border:1px solid rgba(255,255,255,.08);user-select:none;gap:12px;max-width:100%;box-sizing:border-box}
-.jil-logo-btn{position:relative;width:44px;height:44px;border-radius:50%;border:2px solid #9ca3af;background:radial-gradient(circle,#1e3a8a 35%,#d1d5db 36%,#9ca3af 100%);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;overflow:hidden;transition:transform .15s}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;background:transparent!important;color-scheme:normal}body{display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;box-sizing:border-box}
+.wrap{position:relative;display:flex;align-items:center;justify-content:center;flex:none;transform-origin:center center}
+#jil-pill-player{display:inline-flex;align-items:center;background:#122b52;border-radius:9999px;padding:5px 9px 5px 5px;color:#fff;border:1px solid rgba(255,255,255,.08);user-select:none;gap:7px;flex:none;box-sizing:border-box}
+.jil-logo-btn{position:relative;width:42px;height:42px;border-radius:50%;border:2px solid #9ca3af;background:radial-gradient(circle,#1e3a8a 35%,#d1d5db 36%,#9ca3af 100%);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;overflow:hidden;transition:transform .15s}
 .jil-logo-btn:hover{transform:scale(1.04)}.jil-logo-btn:active{transform:scale(.96)}
 .jil-play-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(13,29,53,.25)}
 .jil-info{display:flex;flex-direction:column;justify-content:center}
-.jil-title{font-size:15px;font-weight:700;color:#fff;white-space:nowrap;line-height:1.2}
-.jil-live-row{display:flex;align-items:center;gap:6px;margin-top:2px}
-.jil-status-dot{width:8px;height:8px;border-radius:50%;background:#8492a6;transition:background .3s,box-shadow .3s}
+.jil-title{font-size:11px;font-weight:700;color:#fff;white-space:nowrap;line-height:1.2}
+.jil-live-row{display:flex;align-items:center;gap:5px;margin-top:1px}
+.jil-status-dot{width:7px;height:7px;border-radius:50%;background:#8492a6;transition:background .3s,box-shadow .3s}
 .jil-status-dot.active{background:#00e676;}
-.jil-live-text{font-size:12px;color:#cbd5e1}
-.jil-circle-controls{display:flex;align-items:center;gap:6px;margin-left:4px}
-.jil-circle-btn{width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:transparent;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:background .2s,border-color .2s;font:700 10px/1 inherit;padding:0}
+.jil-live-text{font-size:10.5px;color:#cbd5e1}
+.jil-circle-controls{display:flex;align-items:center;gap:4px;margin-left:0}
+.jil-circle-btn{width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:transparent;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:background .2s,border-color .2s;font:700 10px/1 inherit;padding:0}
 .jil-circle-btn:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.45)}
 .jil-circle-btn:disabled{opacity:.4;cursor:not-allowed}
-.jil-rec-dot{width:8px;height:8px;border-radius:50%;background:#fff;transition:all .2s}
+.jil-rec-dot{width:7px;height:7px;border-radius:50%;background:#fff;transition:all .2s}
 .jil-circle-btn.recording{border-color:#ff5252;background:rgba(255,82,82,.15)}
 .jil-circle-btn.recording .jil-rec-dot{background:#ff5252;animation:jilPulse 1.2s infinite}
 .jil-vol-wrapper{position:relative;display:flex;align-items:center}
-.jil-vol-popover{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#122b52;border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:10px 6px;display:none;flex-direction:column;align-items:center;z-index:300}
-.jil-vol-wrapper:hover .jil-vol-popover,.jil-vol-popover.open{display:flex}
-.jil-vol-slider{writing-mode:vertical-lr;direction:rtl;width:4px;height:64px;accent-color:#ff5252;cursor:pointer;margin:0}
-#jil-panel{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);z-index:200;align-items:center;justify-content:center;gap:8px;background:#122b52;border:1px solid rgba(255,255,255,.12);border-radius:9999px;padding:6px 12px;color:#e2e8f0;font-size:12px;line-height:1.2;white-space:nowrap}
+.jil-vol-popover{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:32px;height:58px;background:#122b52;border:1px solid rgba(255,255,255,.25);border-radius:16px;display:none;align-items:center;justify-content:center;z-index:300}
+.jil-vol-popover.open{display:flex}
+.jil-vol-slider{writing-mode:vertical-lr;direction:rtl;width:4px;height:40px;accent-color:#ff5252;cursor:pointer;margin:0}
+#jil-panel{display:none;position:absolute;inset:0;z-index:200;align-items:center;justify-content:center;gap:6px;background:#122b52;border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:0 10px;color:#e2e8f0;font-size:11px;line-height:1.15;text-align:center}
 #jil-panel.show{display:flex}
-#jil-panel a,#jil-panel button{background:#3b6fd4;color:#fff;border:0;border-radius:9999px;padding:6px 10px;font:600 11px inherit;cursor:pointer;text-decoration:none}
+#jil-panel a,#jil-panel button{background:#3b6fd4;color:#fff;border:0;border-radius:9999px;padding:5px 8px;font:600 10px inherit;cursor:pointer;text-decoration:none}
 #jil-panel button.ghost{background:transparent;border:1px solid rgba(255,255,255,.25)}
-#jil-wave{width:70px;height:16px;flex-shrink:0;margin-left:2px}.jil-live-text{white-space:nowrap}
+#jil-wave{width:46px;height:12px;flex-shrink:0;margin-left:1px}.jil-live-text{white-space:nowrap}
 @keyframes jilPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.85)}}
 </style>
 </head>
@@ -43,7 +43,7 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;background:transparent!
   <div id="jil-pill-player">
     <button id="jil-play-btn" class="jil-logo-btn" aria-label="Play or Pause" title="Play / Pause">
       <div class="jil-play-overlay">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#e53935"><g id="jil-play-icon"><polygon points="6,4 20,12 6,20"></polygon></g></svg>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="#e53935"><g id="jil-play-icon"><polygon points="6,4 20,12 6,20"></polygon></g></svg>
       </div>
     </button>
     <div class="jil-info">
@@ -54,7 +54,7 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;background:transparent!
       <button id="jil-rec-btn" class="jil-circle-btn" aria-label="Record live audio" title="Record audio"><span class="jil-rec-dot"></span></button>
       <div class="jil-vol-wrapper">
         <button id="jil-vol-btn" class="jil-circle-btn" aria-label="Volume" title="Volume">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
         </button>
         <div id="jil-vol-popover" class="jil-vol-popover"><input type="range" id="jil-volume" class="jil-vol-slider" min="0" max="1" step="0.01" value="0.85" aria-label="Volume"></div>
       </div>
@@ -212,11 +212,13 @@ wire(corsAudio);
   }
 
   playBtn.addEventListener("click", e => { e.stopPropagation(); isPlaying ? stopRadio() : startRadio(); });
-  volBtn.addEventListener("click", e => { e.stopPropagation(); volPop.classList.toggle("open"); });
+  let volT;
+  const volLater = () => { clearTimeout(volT); volT = setTimeout(() => volPop.classList.remove("open"), 3000); };
+  volBtn.addEventListener("click", e => { e.stopPropagation(); volPop.classList.toggle("open"); volLater(); });
   document.addEventListener("click", () => volPop.classList.remove("open"));
   volPop.addEventListener("click", e => e.stopPropagation());
   vol.addEventListener("input", e => {
-    const v = parseFloat(e.target.value);
+    const v = parseFloat(e.target.value); volLater();
     if (gainNode) gainNode.gain.value = v; if (audio !== corsAudio || !gainNode) audio.volume = v;
   });
 
@@ -335,7 +337,7 @@ wire(corsAudio);
     const d = new Date(), p = n => String(n).padStart(2, "0");
     const name = `Jesus-is-LORD-Radio-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.${ext}`;
     const mb = (blob.size / 1048576).toFixed(1);
-    msg.textContent = (text ? text + " " : "") + `Saved ${Math.floor(sec / 60)}:${p(sec % 60)} \u00b7 ${mb} MB`;
+    msg.textContent = (text ? text + " " : "") + `Saved ${Math.floor(sec / 60)}:${p(sec % 60)}`;
     dl.href = objUrl; dl.download = name; dl.style.display = "";
     const file = new File([blob], name, { type: blob.type });
     const canShare = navigator.canShare && navigator.canShare({ files: [file] });
@@ -357,6 +359,14 @@ wire(corsAudio);
     else if (!isPlaying) { pendingRec = true; label.textContent = "Starting..."; if (!ctx) { try { ensureGraph(); ctx.resume(); } catch (_) {} } startRadio(); }
     else beginCapture();
   });
+  // Scale the whole player to fit whatever size the iframe is
+  const wrap = document.querySelector(".wrap");
+  function fit() {
+    wrap.style.transform = "none";
+    const s = Math.min(innerWidth / wrap.offsetWidth, innerHeight / wrap.offsetHeight) * 0.98;
+    wrap.style.transform = s < 1 ? `scale(${s})` : "none";
+  }
+  window.addEventListener("resize", fit); window.addEventListener("load", fit); fit();
   if (AUTOPLAY) window.addEventListener("load", () => { autoTry = true; try { startRadio(); } catch (_) { autoTry = false; } });
   window.addEventListener("pagehide", () => { if (rec) stopRecording(true); });
 })();
