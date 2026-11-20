@@ -9,10 +9,10 @@
 <style>
 html,body{margin:0;padding:0;height:100%;overflow:hidden;background:transparent!important;color-scheme:normal}body{display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;box-sizing:border-box}
 .wrap{position:relative;display:flex;align-items:center;justify-content:center;flex:none;transform-origin:center center}
-#jil-pill-player{display:inline-flex;align-items:center;background:#122b52;border-radius:9999px;padding:5px 9px 5px 5px;color:#fff;border:1px solid rgba(255,255,255,.08);user-select:none;gap:7px;flex:none;box-sizing:border-box}
-.jil-logo-btn{position:relative;width:42px;height:42px;border-radius:50%;border:2px solid #9ca3af;background:radial-gradient(circle,#1e3a8a 35%,#d1d5db 36%,#9ca3af 100%);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;overflow:hidden;transition:transform .15s}
+#jil-pill-player{display:inline-flex;align-items:center;background:#122b52;border-radius:0;padding:5px 9px 5px 5px;color:#fff;border:1px solid rgba(255,255,255,.08);user-select:none;gap:7px;flex:none;box-sizing:border-box}
+.jil-logo-btn{position:relative;width:42px;height:42px;border-radius:50%;border:2px solid #ffffff;background:#ffffff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;overflow:hidden;transition:transform .15s}
 .jil-logo-btn:hover{transform:scale(1.04)}.jil-logo-btn:active{transform:scale(.96)}
-.jil-play-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(13,29,53,.25)}
+.jil-play-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:transparent}
 .jil-info{display:flex;flex-direction:column;justify-content:center}
 .jil-title{font-size:11px;font-weight:700;color:#fff;white-space:nowrap;line-height:1.2}
 .jil-live-row{display:flex;align-items:center;gap:5px;margin-top:1px}
@@ -27,10 +27,10 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;background:transparent!
 .jil-circle-btn.recording{border-color:#ff5252;background:rgba(255,82,82,.15)}
 .jil-circle-btn.recording .jil-rec-dot{background:#ff5252;animation:jilPulse 1.2s infinite}
 .jil-vol-wrapper{position:relative;display:flex;align-items:center}
-.jil-vol-popover{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:32px;height:58px;background:#122b52;border:1px solid rgba(255,255,255,.25);border-radius:16px;display:none;align-items:center;justify-content:center;z-index:300}
+.jil-vol-popover{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:32px;height:58px;background:#122b52;border:1px solid rgba(255,255,255,.25);border-radius:0;display:none;align-items:center;justify-content:center;z-index:300}
 .jil-vol-popover.open{display:flex}
 .jil-vol-slider{writing-mode:vertical-lr;direction:rtl;width:4px;height:40px;accent-color:#ff5252;cursor:pointer;margin:0}
-#jil-panel{display:none;position:absolute;inset:0;z-index:200;align-items:center;justify-content:center;gap:6px;background:#122b52;border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:0 10px;color:#e2e8f0;font-size:11px;line-height:1.15;text-align:center}
+#jil-panel{display:none;position:absolute;inset:0;z-index:200;align-items:center;justify-content:center;gap:6px;background:#122b52;border:1px solid rgba(255,255,255,.12);border-radius:0;padding:0 10px;color:#e2e8f0;font-size:11px;line-height:1.15;text-align:center}
 #jil-panel.show{display:flex}
 #jil-panel a,#jil-panel button{background:#3b6fd4;color:#fff;border:0;border-radius:9999px;padding:5px 8px;font:600 10px inherit;cursor:pointer;text-decoration:none}
 #jil-panel button.ghost{background:transparent;border:1px solid rgba(255,255,255,.25)}
