@@ -55,21 +55,12 @@ h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(28px,8vw
 .saved .ghost{background:transparent;border:1px solid rgba(255,255,255,.3)}
 .bars{display:flex;align-items:flex-end;justify-content:center;gap:5px;height:38px;margin-top:0}
 .bars i{width:6px;height:100%;border-radius:2px;background:var(--live);transform-origin:bottom;transform:scaleY(.14)}
-.is-live .bars i{animation:eq 1s ease-in-out infinite}
-.bars i:nth-child(2){animation-delay:-.7s!important;animation-duration:.8s!important}
-.bars i:nth-child(3){animation-delay:-.3s!important;animation-duration:1.1s!important}
-.bars i:nth-child(4){animation-delay:-.9s!important;animation-duration:.9s!important}
-.bars i:nth-child(5){animation-delay:-.5s!important;animation-duration:1.2s!important}
-.bars i:nth-child(6){animation-delay:-.2s!important;animation-duration:.85s!important}
-.bars i:nth-child(7){animation-delay:-.6s!important;animation-duration:1s!important}
-@keyframes eq{0%,100%{transform:scaleY(.18)}50%{transform:scaleY(1)}}
 .vol{display:flex;align-items:center;gap:12px;margin:26px 4px 0}
 .vol svg{flex:none;width:20px;height:20px;fill:var(--muted)}
 .vol input{flex:1;accent-color:var(--accent);cursor:pointer;height:20px;margin:0}
 .share{margin-top:24px;background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:10px 22px;font:600 14px inherit;cursor:pointer}
 .share:hover{background:rgba(255,255,255,.1)}
 .note{margin:18px 0 0;font-size:12px;color:var(--muted)}
-@media (prefers-reduced-motion:reduce){.is-live .bars i{animation:none;transform:scaleY(.6)}}
 </style>
 </head>
 <body>
@@ -89,7 +80,7 @@ h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(28px,8vw
     </div>
   </div>
 
-  <div class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
 
   <div class="vol">
     <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9z"/></svg>
@@ -133,7 +124,7 @@ h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(28px,8vw
 
   var idx = 0, want = false, playing = false, fails = 0, connT = null, stallT = null, liveT = null;
   var rec = null, starting = false, pendingRec = false, objUrl = null, noteT = null;
-  var ctx = null, srcNode = null, gainNode = null;
+  var ctx = null, srcNode = null, gainNode = null, an = null, abuf = null;
   var noCors = {};                       // streams whose server refuses CORS: they play, but cannot be recorded
   var corsAudio = makeEl(true), plainAudio = null, audio = corsAudio;
 
@@ -172,6 +163,7 @@ h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(28px,8vw
   function ui(state) {            // 'idle' | 'busy' | 'live'
     card.classList.toggle('is-live', state === 'live');
     card.classList.toggle('is-busy', state === 'busy');
+    if (state === 'live') startBars(); else stopBars();
     var on = state !== 'idle';
     icoPlay.style.display = on ? 'none' : '';
     icoPause.style.display = on ? '' : 'none';
@@ -224,12 +216,44 @@ h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(28px,8vw
     stallT = setTimeout(function () { if (want && audio.readyState < 3) connect(idx); }, STALL_MS);
   }
 
-  playBtn.addEventListener('click', function () { want ? stop() : play(); });
+  function graphNow() { try { ensureGraph(); ctx.resume(); } catch (_) {} }   // must run inside a tap
+  playBtn.addEventListener('click', function () { if (want) stop(); else { graphNow(); play(); } });
+  // If autoplay started the radio before any tap, hook up the real-time bars on the visitor's first touch or click
+  document.addEventListener('pointerdown', function () { if (!ctx && want && playing && audio === corsAudio) graphNow(); }, { passive: true });
+  document.addEventListener('keydown', function () { if (!ctx && want && playing && audio === corsAudio) graphNow(); });
   vol.addEventListener('input', function () {
     var v = vol.value / 100;
     if (gainNode) gainNode.gain.value = v;
     if (audio !== corsAudio || !gainNode) audio.volume = v;
   });
+
+  // ---------- Bars that follow the real sound ----------
+  var bars = [].slice.call(document.querySelectorAll('.bars i')), N = bars.length, lv = [], raf = 0, ph = 0, zeroT = 0;
+  var still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  for (var k = 0; k < N; k++) lv.push(0.14);
+  function frame() {
+    raf = requestAnimationFrame(frame);
+    var real = an && ctx && ctx.state === 'running' && audio === corsAudio;
+    if (real) {
+      an.getByteFrequencyData(abuf);
+      var sum = 0; for (var j = 0; j < abuf.length; j++) sum += abuf[j];
+      if (sum) zeroT = 0;
+      else if (!zeroT) zeroT = performance.now();
+      else if (!rec && performance.now() - zeroT > 12000) { zeroT = 0; noCors[idx] = 1; connect(idx); }   // silent graph: fall back to plain playback
+    }
+    for (var i = 0; i < N; i++) {
+      var t = real ? Math.min(1, abuf[1 + Math.round(Math.pow(i / (N - 1), 1.6) * 30)] / 255 * 1.4)
+                   : 0.25 + 0.5 * Math.abs(Math.sin(ph * (0.5 + i * 0.17) + i * 1.7));
+      lv[i] += (t - lv[i]) * 0.4;
+      bars[i].style.transform = 'scaleY(' + Math.max(0.1, lv[i]).toFixed(3) + ')';
+    }
+    if (!still) ph += 0.12;
+  }
+  function startBars() { zeroT = 0; if (!raf) frame(); }
+  function stopBars() {
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    for (var i = 0; i < N; i++) { lv[i] = 0.14; bars[i].style.transform = 'scaleY(.14)'; }
+  }
 
   // ---------- Recording (MP3) ----------
   function ensureGraph() {
@@ -242,6 +266,8 @@ h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(28px,8vw
     corsAudio.volume = 1;                 // listening volume is applied by the gain node, so recordings stay full level
     srcNode.connect(gainNode);
     gainNode.connect(ctx.destination);
+    an = ctx.createAnalyser(); an.fftSize = 256; an.smoothingTimeConstant = 0.55; an.minDecibels = -85; an.maxDecibels = -20;
+    abuf = new Uint8Array(an.frequencyBinCount); srcNode.connect(an);   // taps the real sound for the bars
   }
   function resample(f, from, to) {
     if (from === to) return f;
