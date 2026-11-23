@@ -123,6 +123,7 @@ h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(28px,8vw
     'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js',
     'https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js'
   ];
+  var CHASE_LAG = 3, KEEP = 1;     // if we are more than 3s behind the live edge, jump to 1s behind it
   var RATES = [8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000];
 
   var $ = function (id) { return document.getElementById(id); };
@@ -130,7 +131,7 @@ h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(28px,8vw
   var vol = $('vol'), shareBtn = $('share'), recBtn = $('rec');
   var saved = $('saved'), msg = $('msg'), dl = $('dl'), shBtn = $('shfile');
 
-  var idx = 0, want = false, playing = false, fails = 0, connT = null, stallT = null;
+  var idx = 0, want = false, playing = false, fails = 0, connT = null, stallT = null, liveT = null;
   var rec = null, starting = false, pendingRec = false, objUrl = null, noteT = null;
   var ctx = null, srcNode = null, gainNode = null;
   var noCors = {};                       // streams whose server refuses CORS: they play, but cannot be recorded
@@ -155,6 +156,7 @@ h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(28px,8vw
     function on(ev, fn) { a.addEventListener(ev, function (e) { if (a === audio) fn(e); }); }
     on('playing', function () {
       playing = true; fails = 0; clearT(); ui('live');
+      clearInterval(liveT); liveT = setInterval(chase, 1500); setTimeout(chase, 700);
       if (pendingRec) { pendingRec = false; beginCapture(); }
     });
     on('waiting', armStall);
@@ -178,6 +180,16 @@ h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(28px,8vw
     if (!rec) label.textContent = state === 'idle' ? 'TAP PLAY TO LISTEN' : 'LIVE';
   }
   function clearT() { clearTimeout(connT); clearTimeout(stallT); }
+  // Stay in real time: browsers download the stream's start-up burst and any rebuffer delay and play it all,
+  // so we drift behind. This skips ahead to the live edge whenever we are too far behind.
+  function chase() {
+    try {
+      var b = audio.buffered;
+      if (!want || audio.paused || !b || !b.length) return;
+      var end = b.end(b.length - 1);
+      if (end - audio.currentTime > CHASE_LAG) audio.currentTime = end - KEEP;
+    } catch (e) {}
+  }
 
   function connect(i) {
     clearT(); idx = i; playing = false; ui('busy');
@@ -201,7 +213,7 @@ h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(28px,8vw
   }
   function play() { want = true; fails = 0; connect(0); }
   function stop() {
-    want = false; playing = false; pendingRec = false; clearT();
+    want = false; playing = false; pendingRec = false; clearT(); clearInterval(liveT);
     stopRecording(true);
     audio.pause(); audio.removeAttribute('src'); audio.load();   // next play always joins the live broadcast
     ui('idle');
