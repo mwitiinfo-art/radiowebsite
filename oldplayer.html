@@ -56,11 +56,11 @@ body{display:flex;align-items:center;justify-content:center;}
 <script>
 (function () {
   'use strict';
-  // The 3 streams, tried in this order (next one is used automatically if one fails)
+  // The 3 streams, tried in this order. The FIRST one is your live feed; the others are only backups.
   var SOURCES = [
+    'https://stream.zeno.fm/thdtw5xd9eiuv',
     'https://s3.radio.co/s97f38db97/listen',
-    'https://stream.zeno.fm/3gdtad95608uv',
-    'https://stream.zeno.fm/thdtw5xd9eiuv'
+    'https://stream.zeno.fm/3gdtad95608uv'
   ];
   var TITLE = 'JESUS IS LORD RADIO';
   var AUTOPLAY = true;   // tries to start on load; if the browser blocks it, the listener just taps play
