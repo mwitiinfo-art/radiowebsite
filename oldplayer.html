@@ -1,0 +1,267 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jesus is LORD Radio Player</title>
+<!-- warm up the connections so sound starts sooner -->
+<link rel="preconnect" href="https://s3.radio.co">
+<link rel="preconnect" href="https://stream.zeno.fm">
+<link rel="dns-prefetch" href="https://s3.radio.co">
+<link rel="dns-prefetch" href="https://stream.zeno.fm">
+<style>
+html,body{margin:0;padding:0;background:transparent;overflow:hidden;}
+.jp{box-sizing:border-box;width:190px;height:62px;padding:8px 10px;border-radius:6px;
+  background:linear-gradient(#3a3a3a,#1c1c1c);box-shadow:0 1px 3px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.12);
+  font-family:Arial,Helvetica,sans-serif;color:#fff;display:flex;flex-direction:column;justify-content:space-between;user-select:none;}
+.jp__top{display:flex;align-items:center;gap:3px;}
+.jp__btn{width:20px;height:20px;padding:0;border:0;background:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 20px;}
+.jp__btn:hover{color:#7CFC00;}
+.jp__btn:focus-visible{outline:1px solid #7CFC00;}
+.jp__screen{flex:1;min-width:0;height:20px;border-radius:3px;background:#111;box-shadow:inset 0 1px 2px #000;display:flex;align-items:center;gap:4px;padding:0 5px;overflow:hidden;margin-left:3px;}
+.jp__led{flex:0 0 6px;width:6px;height:6px;border-radius:50%;background:#555;}
+.jp.is-playing .jp__led{background:#3cd13c;box-shadow:0 0 4px #3cd13c;}
+.jp.is-busy .jp__led{background:#e6b422;}
+.jp__text{flex:1;min-width:0;overflow:hidden;font-size:9px;font-weight:bold;letter-spacing:0;}
+.jp__marq{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.jp__marq i{display:none;font-style:normal;}
+.jp.is-playing .jp__marq{display:inline-block;overflow:visible;text-overflow:clip;animation:jpScroll 9s linear infinite;}
+.jp.is-playing .jp__marq span,.jp.is-playing .jp__marq i{display:inline-block;padding-right:28px;}
+@keyframes jpScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.jp.is-playing .jp__marq{animation:none}}
+.jp__vol{display:flex;align-items:center;gap:6px;}
+.jp__vol svg{flex:0 0 auto;opacity:.8;}
+.jp__vol input{flex:1;height:14px;margin:0;accent-color:#ddd;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="jp" id="jp">
+  <div class="jp__top">
+    <button class="jp__btn" id="jp-play" type="button" aria-label="Play Jesus is LORD Radio">
+      <svg id="jp-i-play" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>
+      <svg id="jp-i-pause" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="display:none"><rect x="5" y="4" width="5" height="16"/><rect x="14" y="4" width="5" height="16"/></svg>
+    </button>
+    <button class="jp__btn" id="jp-stop" type="button" aria-label="Stop">
+      <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><rect x="4" y="4" width="16" height="16"/></svg>
+    </button>
+    <div class="jp__screen"><span class="jp__led"></span><span class="jp__text"><span class="jp__marq"><span id="jp-text">JESUS IS LORD RADIO</span><i aria-hidden="true">JESUS IS LORD RADIO</i></span></span></div>
+  </div>
+  <div class="jp__vol">
+    <svg viewBox="0 0 24 24" width="11" height="11" fill="#fff"><path d="M3 9v6h4l5 5V4L7 9z"/></svg>
+    <input id="jp-vol" type="range" min="0" max="100" value="100" aria-label="Volume">
+  </div>
+  <audio id="jp-audio" preload="none" playsinline webkit-playsinline></audio>
+</div>
+<script>
+(function () {
+  'use strict';
+  // The 3 streams, tried in this order (next one is used automatically if one fails)
+  var SOURCES = [
+    'https://s3.radio.co/s97f38db97/listen',
+    'https://stream.zeno.fm/3gdtad95608uv',
+    'https://stream.zeno.fm/thdtw5xd9eiuv'
+  ];
+  var TITLE = 'JESUS IS LORD RADIO';
+  var AUTOPLAY = true;   // tries to start on load; if the browser blocks it, the listener just taps play
+
+  var CONNECT_TIMEOUT_MS = 5000;   // give up on a slow stream after 5s and try the next one
+  var LIST_RETRY_MS = 6000;
+  var SAME_SOURCE_RETRIES = 1;
+  var STALL_MS = 7000;
+  var STUTTER_WINDOW_MS = 40000;
+  var STUTTER_THRESHOLD = 3;
+  var STUTTER_COOLDOWN_MS = 90000;
+
+  var box = document.getElementById('jp');
+  var audio = document.getElementById('jp-audio');
+  var btn = document.getElementById('jp-play');
+  var stopBtn = document.getElementById('jp-stop');
+  var textEl = document.getElementById('jp-text');
+  var vol = document.getElementById('jp-vol');
+  var iPlay = document.getElementById('jp-i-play');
+  var iPause = document.getElementById('jp-i-pause');
+  audio.playsInline = true;
+
+  function log(m) { if (window.console && console.info) console.info('[radio failover] ' + m); }
+  // The screen always shows the station name: no "Connecting / Buffering / Reconnecting" messages.
+  // Only the little light changes (amber while working, green while playing).
+  function setText(t, busy) { textEl.textContent = TITLE; box.classList.toggle('is-busy', !!busy); }
+  function setPlayingState(on) {
+    box.classList.toggle('is-playing', on);
+    iPlay.style.display = on ? 'none' : '';
+    iPause.style.display = on ? '' : 'none';
+    btn.setAttribute('aria-label', (on ? 'Pause ' : 'Play ') + 'Jesus is LORD Radio');
+    setText(TITLE, false);
+  }
+
+  var SILENT = 'data:audio/wav;base64,UklGRiQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIA=';
+  var unlocked = false, unlocking = false;
+
+  var shouldBePlaying = false;
+  var stallTimer = null, reconnectTimer = null, reconnectAttempts = 0;
+  var sourceIndex = 0, sourceConfirmed = false;
+  var connectTimer = null, listRetryTimer = null;
+  var playAttempt = 0, failedAttempt = -1;
+
+  function clearStallTimer() { if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; } }
+  function clearSourceTimers() {
+    if (connectTimer) { clearTimeout(connectTimer); connectTimer = null; }
+    if (listRetryTimer) { clearTimeout(listRetryTimer); listRetryTimer = null; }
+  }
+  function clearAll() { clearStallTimer(); clearSourceTimers(); clearTimeout(reconnectTimer); }
+  function wantsAudio() { return shouldBePlaying && (!audio.paused || !!audio.error); }
+
+  function startPlayback() {
+    var attempt = ++playAttempt;
+    if (connectTimer) clearTimeout(connectTimer);
+    connectTimer = setTimeout(function () {
+      connectTimer = null;
+      if (wantsAudio()) advanceSource('no audio within ' + (CONNECT_TIMEOUT_MS / 1000) + 's');
+    }, CONNECT_TIMEOUT_MS);
+    var p = audio.play();
+    if (p && p.catch) p.catch(function (err) {
+      if (attempt !== playAttempt) return;
+      var name = err && err.name;
+      if (name === 'AbortError') return;
+      if (name === 'NotAllowedError') {
+        shouldBePlaying = false;
+        clearSourceTimers();
+        setPlayingState(false);
+        return;
+      }
+      if (shouldBePlaying) advanceSource('play() failed' + (name ? ' (' + name + ')' : ''));
+    });
+  }
+
+  function useSource(index, reason) {
+    clearAll();
+    reconnectAttempts = 0;
+    sourceIndex = index;
+    sourceConfirmed = false;
+    box.setAttribute('data-active-source', String(index));
+    log('trying source ' + (index + 1) + '/' + SOURCES.length + ' (' + reason + '): ' + SOURCES[index]);
+    audio.src = SOURCES[index];
+    startPlayback();
+  }
+
+  function advanceSource(reason) {
+    if (!shouldBePlaying) return;
+    if (failedAttempt === playAttempt) return;
+    failedAttempt = playAttempt;
+    log('source ' + (sourceIndex + 1) + ' failed: ' + reason);
+    setText(TITLE, true);
+    var next = sourceIndex + 1;
+    if (next < SOURCES.length) { useSource(next, 'failover'); return; }
+    clearAll();
+    log('every source failed; retrying from the top in ' + (LIST_RETRY_MS / 1000) + 's');
+    listRetryTimer = setTimeout(function () {
+      listRetryTimer = null;
+      if (wantsAudio()) useSource(0, 'retry from the top');
+    }, LIST_RETRY_MS);
+  }
+
+  function attemptReconnect() {
+    if (!shouldBePlaying) return;
+    if (reconnectAttempts >= SAME_SOURCE_RETRIES) { advanceSource('reconnect did not recover'); return; }
+    reconnectAttempts++;
+    setText(TITLE, true);
+    var backoff = Math.min(3000 * reconnectAttempts, 15000);
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(function () {
+      if (!shouldBePlaying) return;
+      audio.load();
+      startPlayback();
+    }, backoff);
+  }
+
+  function armStallWatch() {
+    clearStallTimer();
+    if (!shouldBePlaying) return;
+    stallTimer = setTimeout(function () {
+      if (connectTimer) return;
+      if (shouldBePlaying && audio.paused === false && audio.readyState < 3) attemptReconnect();
+    }, STALL_MS);
+  }
+
+  var stutterTimes = [], stutterHealthyTimer = null, lastStutterAction = 0, stutterReconnectTried = false;
+  function noteStutter() {
+    if (!shouldBePlaying) return;
+    var now = Date.now();
+    stutterTimes.push(now);
+    stutterTimes = stutterTimes.filter(function (t) { return now - t < STUTTER_WINDOW_MS; });
+    if (stutterTimes.length < STUTTER_THRESHOLD) return;
+    if (now - lastStutterAction < STUTTER_COOLDOWN_MS) return;
+    lastStutterAction = now;
+    stutterTimes = [];
+    if (!stutterReconnectTried) { stutterReconnectTried = true; attemptReconnect(); }
+  }
+
+  audio.addEventListener('waiting', function () { if (unlocking) return; setText(TITLE, true); armStallWatch(); noteStutter(); });
+  audio.addEventListener('stalled', function () { if (!unlocking) armStallWatch(); });
+  audio.addEventListener('error', function () {
+    if (unlocking || !shouldBePlaying || !audio.error) return;
+    advanceSource('stream error (code ' + audio.error.code + ')');
+  });
+  audio.addEventListener('playing', function () {
+    if (unlocking) return;
+    reconnectAttempts = 0;
+    clearSourceTimers();
+    if (!sourceConfirmed) {
+      sourceConfirmed = true;
+      log('playing source ' + (sourceIndex + 1) + '/' + SOURCES.length + ': ' + SOURCES[sourceIndex]);
+    }
+    clearTimeout(stutterHealthyTimer);
+    stutterHealthyTimer = setTimeout(function () { stutterTimes = []; stutterReconnectTried = false; }, 30000);
+    clearStallTimer();
+    clearTimeout(reconnectTimer);
+    setPlayingState(true);
+  });
+  audio.addEventListener('pause', function () { if (!unlocking && !shouldBePlaying) setPlayingState(false); });
+
+  function play(fromUser) {
+    shouldBePlaying = true;
+    setText(TITLE, true);
+    // A real tap already allows sound, so skip the silent warm-up and connect straight away
+    if (fromUser) { unlocked = true; unlocking = false; useSource(0, 'play'); return; }
+    if (unlocked) { useSource(0, 'play'); return; }
+    unlocked = true;
+    unlocking = true;
+    var go = function () {
+      if (!unlocking) return;
+      unlocking = false;
+      if (shouldBePlaying) useSource(0, 'play');
+    };
+    audio.src = SILENT;
+    var p = audio.play();
+    if (p && p.then) p.then(go, function (err) {
+      if (err && err.name === 'NotAllowedError') {
+        if (!unlocking) return;
+        unlocking = false; unlocked = false; shouldBePlaying = false;
+        setPlayingState(false);
+        return;
+      }
+      go();
+    });
+    else go();
+    setTimeout(go, 1500);
+  }
+  function stop() {
+    shouldBePlaying = false;
+    reconnectAttempts = 0;
+    clearAll();
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+    setPlayingState(false);
+  }
+
+  btn.addEventListener('click', function () { if (shouldBePlaying) stop(); else play(true); });
+  stopBtn.addEventListener('click', stop);
+  vol.addEventListener('input', function () { audio.volume = vol.value / 100; });
+
+  setPlayingState(false);
+  if (AUTOPLAY) play();
+})();
+</script>
+</body>
+</html>
